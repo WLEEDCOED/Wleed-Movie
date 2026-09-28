@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Series {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  poster      String?
+  createdAt   DateTime  @default(now())
+  episodes    Episode[]
+}
+
+model Episode {
+  id            Int               @id @default(autoincrement())
+  seriesId      Int
+  seasonNumber  Int               @default(1)
+  episodeNumber Int
+  title         String
+  description   String?
+  imdbId        String?
+  tmdbId        String?
+  createdAt     DateTime          @default(now())
+  series        Series            @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  servers       StreamingServer[]
+  subtitles     Subtitle[]
+
+  @@unique([seriesId, seasonNumber, episodeNumber])
+}
+
+model StreamingServer {
+  id        Int      @id @default(autoincrement())
+  episodeId Int
+  name      String
+  embedUrl  String
+  language  String?
+  quality   String?
+  isActive  Boolean  @default(true)
+  isTrusted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  episode   Episode  @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+}
+
+model Subtitle {
+  id        Int      @id @default(autoincrement())
+  episodeId Int
+  language  String   @default("ar")
+  label     String
+  filePath  String
+  source    String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  episode   Episode  @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+}

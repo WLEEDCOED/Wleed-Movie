@@ -1,0 +1,126 @@
+import { getSeriesDetail, getSeasonEpisodes, getImageUrl } from '@/lib/tmdb';
+import { generateTVServers } from '@/lib/servers';
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import ServerSwitcher from '@/components/ServerSwitcher';
+import type { Metadata } from 'next';
+
+interface PageProps {
+  params: Promise<{ tmdbId: string; season: string; episode: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { tmdbId, season, episode } = await params;
+  try {
+    const series = await getSeriesDetail(parseInt(tmdbId));
+    return {
+      title: `${series.name} S${season}E${episode} | WleedMovie`,
+      description: `شاهد ${series.name} الموسم ${season} الحلقة ${episode} مترجم`,
+    };
+  } catch {
+    return { title: 'غير موجود' };
+  }
+}
+
+export const dynamic = 'force-dynamic';
+
+export default async function WatchTVPage({ params }: PageProps) {
+  const { tmdbId: tmdbIdStr, season: seasonStr, episode: episodeStr } = await params;
+  const tmdbId = parseInt(tmdbIdStr);
+  const seasonNum = parseInt(seasonStr);
+  const episodeNum = parseInt(episodeStr);
+  if (isNaN(tmdbId) || isNaN(seasonNum) || isNaN(episodeNum)) notFound();
+
+  let series;
+  try {
+    series = await getSeriesDetail(tmdbId);
+  } catch {
+    notFound();
+  }
+
+  let episodes;
+  try {
+    episodes = await getSeasonEpisodes(tmdbId, seasonNum);
+  } catch {
+    episodes = [];
+  }
+
+  const currentEp = episodes.find((e) => e.episode_number === episodeNum);
+  const servers = generateTVServers(tmdbId, seasonNum, episodeNum);
+
+  const prevEp = episodes.find((e) => e.episode_number === episodeNum - 1);
+  const nextEp = episodes.find((e) => e.episode_number === episodeNum + 1);
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="flex items-center gap-2 text-sm text-neutral-400 mb-4 animate-fade-in">
+        <Link href="/" className="hover:text-white transition-colors">الرئيسية</Link>
+        <span>/</span>
+        <Link href={`/series/${tmdbId}`} className="hover:text-white transition-colors">{series.name}</Link>
+        <span>/</span>
+        <span className="text-white">S{seasonNum} · E{episodeNum}</span>
+      </div>
+
+      <div className="mb-6 animate-fade-in">
+        <h1 className="text-2xl md:text-3xl font-black mb-2">
+          {currentEp?.name || `الحلقة ${episodeNum}`}
+        </h1>
+        <p className="text-neutral-400">
+          {series.name} — الموسم {seasonNum}، الحلقة {episodeNum}
+        </p>
+      </div>
+
+      <div className="animate-slide-up">
+        <ServerSwitcher servers={servers} />
+      </div>
+
+      <div className="flex items-center justify-between mt-8 animate-fade-in">
+        {prevEp ? (
+          <Link href={`/watch/tv/${tmdbId}/${seasonNum}/${prevEp.episode_number}`} className="flex items-center gap-2 glass rounded-xl px-5 py-3 hover:bg-white/10 transition-colors group">
+            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            <span className="text-sm">الحلقة السابقة</span>
+          </Link>
+        ) : <div />}
+        {nextEp ? (
+          <Link href={`/watch/tv/${tmdbId}/${seasonNum}/${nextEp.episode_number}`} className="flex items-center gap-2 glass rounded-xl px-5 py-3 hover:bg-white/10 transition-colors group">
+            <span className="text-sm">الحلقة التالية</span>
+            <svg className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        ) : <div />}
+      </div>
+
+      {currentEp?.overview && (
+        <div className="mt-8 glass rounded-xl p-6 animate-fade-in">
+          <h2 className="text-lg font-bold mb-2">عن الحلقة</h2>
+          <p className="text-neutral-300 leading-relaxed">{currentEp.overview}</p>
+        </div>
+      )}
+
+      {episodes.length > 1 && (
+        <div className="mt-8 animate-fade-in">
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full" />
+            حلقات الموسم {seasonNum}
+          </h2>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+            {episodes.map((ep) => (
+              <Link
+                key={ep.id}
+                href={`/watch/tv/${tmdbId}/${seasonNum}/${ep.episode_number}`}
+                className={`glass rounded-lg p-2.5 text-center text-sm font-medium transition-all hover:bg-white/10 ${
+                  ep.episode_number === episodeNum ? 'bg-blue-600/30 border-blue-500/50 text-blue-400' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                E{ep.episode_number}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
