@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { getTrending, getTrendingTV, getTrendingMovies, searchMulti, getImageUrl, getTitle, getLink, getYear, getMediaTypeLabel } from '@/lib/tmdb';
+import { getTrending, getTrendingTV, getTrendingMovies, searchMulti, getImageUrl, getTitle, getLink, getYear, getMediaTypeLabel, getByProvider, getTVByProvider, getMoviesByProvider } from '@/lib/tmdb';
 import type { TMDBTrending } from '@/lib/tmdb';
 import SearchForm from '@/components/SearchForm';
+import NetworkFilters, { PROVIDERS } from '@/components/NetworkFilters';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,17 +29,24 @@ function Section({ title, items, showAll }: { title: string; items: TMDBTrending
   );
 }
 
-export default async function HomePage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ q?: string; provider?: string }> }) {
   let trending: TMDBTrending[] = [];
   let trendingTV: TMDBTrending[] = [];
   let trendingMovies: TMDBTrending[] = [];
   let searchResults: TMDBTrending[] = [];
   const resolvedSearchParams = await searchParams;
   const query = resolvedSearchParams.q || '';
+  const providerId = resolvedSearchParams.provider ? parseInt(resolvedSearchParams.provider) : null;
 
   try {
     if (query) {
       searchResults = await searchMulti(query);
+    } else if (providerId) {
+      [trending, trendingTV, trendingMovies] = await Promise.all([
+        getByProvider(providerId),
+        getTVByProvider(providerId),
+        getMoviesByProvider(providerId),
+      ]);
     } else {
       [trending, trendingTV, trendingMovies] = await Promise.all([
         getTrending(),
@@ -50,6 +58,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     console.error('Failed to fetch from TMDB:', error);
   }
 
+  const activeProvider = PROVIDERS.find(n => n.id === providerId);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero Section */}
@@ -58,7 +68,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.15),transparent_50%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(168,85,247,0.1),transparent_50%)]" />
           <div className="relative z-10">
-            <h1 className="text-3xl md:text-5xl font-black mb-4 gradient-text">WleedMovie</h1>
+            <h1 className="text-3xl md:text-5xl font-black mb-4 gradient-text">
+              {activeProvider ? `أعمال ${activeProvider.name}` : 'WleedMovie'}
+            </h1>
             <p className="text-lg md:text-xl text-neutral-300 mb-8 max-w-2xl">
               شاهد أحدث المسلسلات والأفلام العالمية بجودة عالية.
             </p>
@@ -67,6 +79,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </div>
         </div>
       </section>
+
+      {!query && <NetworkFilters activeProviderId={providerId} baseUrl="/" />}
 
       {query ? (
         searchResults.length === 0 ? (
@@ -89,13 +103,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         ) : (
           <>
             {trending.length > 0 && (
-              <Section title="🔥 الأكثر مشاهدة هذا الأسبوع" items={trending} />
+              <Section title={activeProvider ? `الأكثر مشاهدة على ${activeProvider.short}` : "🔥 الأكثر مشاهدة هذا الأسبوع"} items={trending} />
             )}
             {trendingTV.length > 0 && (
-              <Section title="📺 مسلسلات رائجة" items={trendingTV} />
+              <Section title={activeProvider ? `مسلسلات ${activeProvider.short}` : "📺 مسلسلات رائجة"} items={trendingTV} />
             )}
             {trendingMovies.length > 0 && (
-              <Section title="🎬 أفلام رائجة" items={trendingMovies} />
+              <Section title={activeProvider ? `أفلام ${activeProvider.short}` : "🎬 أفلام رائجة"} items={trendingMovies} />
             )}
           </>
         )

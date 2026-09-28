@@ -147,3 +147,29 @@ export async function getTVByNetwork(networkId: number): Promise<TMDBTrending[]>
   });
   return data.results.map(r => ({ ...r, media_type: 'tv' }));
 }
+
+export async function getByProvider(providerId: number): Promise<TMDBTrending[]> {
+  const [movies, tv] = await Promise.all([
+    getMoviesByProvider(providerId),
+    getTVByProvider(providerId)
+  ]);
+  return [...movies, ...tv].sort((a, b) => b.vote_average - a.vote_average);
+}
+
+export async function getMoviesByProvider(providerId: number): Promise<TMDBTrending[]> {
+  const data = await tmdbFetch<{ results: TMDBTrending[] }>('/discover/movie', {
+    with_watch_providers: providerId.toString(),
+    watch_region: 'US',
+    sort_by: 'popularity.desc',
+  });
+  return data.results.map(r => ({ ...r, media_type: 'movie' }));
+}
+
+export async function getTVByProvider(providerId: number): Promise<TMDBTrending[]> {
+  const data = await tmdbFetch<{ results: TMDBTrending[] }>('/discover/tv', {
+    with_watch_providers: providerId.toString(),
+    watch_region: 'US',
+    sort_by: 'popularity.desc',
+  });
+  return data.results.map(r => ({ ...r, media_type: 'tv' }));
+}
