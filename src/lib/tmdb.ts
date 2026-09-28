@@ -139,3 +139,11 @@ export async function searchMulti(query: string): Promise<TMDBTrending[]> {
   const data = await tmdbFetch<{ results: TMDBTrending[] }>('/search/multi', { query });
   return data.results.filter(r => r.media_type === 'tv' || r.media_type === 'movie');
 }
+
+export async function getTVByNetwork(networkId: number): Promise<TMDBTrending[]> {
+  const data = await tmdbFetch<{ results: TMDBTrending[] }>('/discover/tv', {
+    with_networks: networkId.toString(),
+    sort_by: 'popularity.desc',
+  });
+  return data.results.map(r => ({ ...r, media_type: 'tv' }));
+}

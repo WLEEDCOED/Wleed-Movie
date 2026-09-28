@@ -1,4 +1,4 @@
-import { getSeriesDetail, getSeasonEpisodes, getImageUrl } from '@/lib/tmdb';
+import { getSeriesDetail, getSeasonEpisodes, getImageUrl, TMDBEpisode } from '@/lib/tmdb';
 import { generateTVServers } from '@/lib/servers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -38,7 +38,7 @@ export default async function WatchTVPage({ params }: PageProps) {
     notFound();
   }
 
-  let episodes;
+  let episodes: TMDBEpisode[] = [];
   try {
     episodes = await getSeasonEpisodes(tmdbId, seasonNum);
   } catch {
