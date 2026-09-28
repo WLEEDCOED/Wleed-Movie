@@ -81,7 +81,7 @@ export default async function MoviePage({ params }: PageProps) {
                   </span>
                 )}
                 {movie.release_date && <span className="text-neutral-300 font-medium bg-black/40 px-3 py-1.5 rounded-lg backdrop-blur-sm">{movie.release_date.substring(0, 4)}</span>}
-                {movie.runtime > 0 && <span className="text-neutral-300 font-medium bg-black/40 px-3 py-1.5 rounded-lg backdrop-blur-sm">{movie.runtime} دقيقة</span>}
+                {movie.runtime && movie.runtime > 0 ? <span className="text-neutral-300 font-medium bg-black/40 px-3 py-1.5 rounded-lg backdrop-blur-sm">{movie.runtime} دقيقة</span> : null}
               </div>
 
               {movie.genres.length > 0 && (
