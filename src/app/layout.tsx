@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   keywords: 'مسلسلات, أفلام, مترجم, عربي, مشاهدة, بث, سينما',
 };
 
+import Navbar from '@/components/Navbar';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,59 +30,13 @@ export default function RootLayout({
         />
       </head>
       <body
-        className="min-h-screen bg-neutral-950 text-white antialiased"
+        className="min-h-screen bg-black text-white antialiased selection:bg-red-500/30"
         style={{ fontFamily: 'Tajawal, sans-serif' }}
       >
-        {/* Header / Navbar */}
-        <header className="sticky top-0 z-50 glass">
-          <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <a href="/" className="flex items-center gap-3 group">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:shadow-blue-500/50 transition-shadow">
-                  <svg
-                    className="w-6 h-6 text-white"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-                <span className="text-xl font-bold gradient-text">
-                  WleedMovie
-                </span>
-              </a>
-              <div className="flex items-center gap-2 md:gap-4">
-                <a
-                  href="/"
-                  className="text-sm text-neutral-300 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/5"
-                >
-                  الرئيسية
-                </a>
-                <a
-                  href="/movies"
-                  className="text-sm text-neutral-300 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/5"
-                >
-                  الأفلام
-                </a>
-                <a
-                  href="/series"
-                  className="text-sm text-neutral-300 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/5"
-                >
-                  المسلسلات
-                </a>
-              </div>
-            </div>
-          </nav>
-        </header>
+        <Navbar />
 
         {/* Main Content */}
-        <main className="min-h-[calc(100vh-4rem)]">{children}</main>
+        <main className="min-h-screen pb-16">{children}</main>
 
         {/* Footer */}
         <footer className="border-t border-neutral-800/50 mt-16">

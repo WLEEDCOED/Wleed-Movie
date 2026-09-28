@@ -41,50 +41,70 @@ export default async function MoviePage({ params }: PageProps) {
   const poster = getImageUrl(movie.poster_path);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="flex items-center gap-2 text-sm text-neutral-400 mb-4 animate-fade-in">
-        <Link href="/" className="hover:text-white transition-colors">الرئيسية</Link>
-        <span>/</span>
-        <span className="text-white">{movie.title}</span>
-      </div>
-
-      {backdrop && (
-        <div className="relative rounded-2xl overflow-hidden mb-6 h-48 md:h-72">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={backdrop} alt={movie.title} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/50 to-transparent" />
-        </div>
-      )}
-
-      <div className="flex flex-col md:flex-row gap-6 mb-6 animate-fade-in">
-        {poster && (
-          <div className="w-full md:w-48 flex-shrink-0">
-            <div className="aspect-[2/3] rounded-xl overflow-hidden border border-neutral-800/50 shadow-2xl">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={poster} alt={movie.title} className="w-full h-full object-cover" />
-            </div>
-          </div>
-        )}
-        <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-black mb-2 gradient-text">{movie.title}</h1>
-          <div className="flex flex-wrap gap-3 mb-4">
-            {movie.release_date && <span className="glass rounded-lg px-3 py-1.5 text-xs">{movie.release_date.substring(0, 4)}</span>}
-            {movie.runtime && <span className="glass rounded-lg px-3 py-1.5 text-xs">{movie.runtime} دقيقة</span>}
-            {movie.vote_average > 0 && <span className="glass rounded-lg px-3 py-1.5 text-xs text-yellow-400">⭐ {movie.vote_average.toFixed(1)}</span>}
-          </div>
-          {movie.genres.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {movie.genres.map((g) => (
-                <span key={g.id} className="glass rounded-full px-3 py-1 text-xs text-neutral-300">{g.name}</span>
-              ))}
-            </div>
+    <div className="w-full">
+      {/* Full Bleed Backdrop */}
+      <div className="relative w-full h-[60vh] md:h-[75vh] flex items-end pb-12">
+        <div className="absolute inset-0 z-0">
+          {backdrop && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={backdrop} alt={movie.title} className="w-full h-full object-cover" />
           )}
-          {movie.overview && <p className="text-neutral-300 leading-relaxed">{movie.overview}</p>}
+        </div>
+        <div className="absolute inset-0 z-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
+        <div className="absolute inset-0 z-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row gap-8 items-end md:items-stretch">
+            {/* Poster */}
+            {poster && (
+              <div className="hidden md:block w-56 flex-shrink-0 -mb-20 z-20">
+                <div className="aspect-[2/3] rounded-xl overflow-hidden border border-neutral-800/50 shadow-2xl shadow-black">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={poster} alt={movie.title} className="w-full h-full object-cover" />
+                </div>
+              </div>
+            )}
+            
+            {/* Info */}
+            <div className="flex-1 animate-slide-up">
+              <div className="flex items-center gap-2 text-sm text-neutral-400 mb-2">
+                <Link href="/" className="hover:text-white transition-colors">الرئيسية</Link>
+                <span>/</span>
+                <span className="text-white">{movie.title}</span>
+              </div>
+              <h1 className="text-4xl md:text-5xl font-black mb-4 text-white drop-shadow-md">{movie.title}</h1>
+              
+              <div className="flex flex-wrap items-center gap-4 mb-4 text-sm">
+                {movie.vote_average > 0 && (
+                  <span className="flex items-center gap-1 text-yellow-500 font-bold bg-black/40 px-3 py-1.5 rounded-lg backdrop-blur-sm">
+                    ⭐ {movie.vote_average.toFixed(1)}
+                  </span>
+                )}
+                {movie.release_date && <span className="text-neutral-300 font-medium bg-black/40 px-3 py-1.5 rounded-lg backdrop-blur-sm">{movie.release_date.substring(0, 4)}</span>}
+                {movie.runtime > 0 && <span className="text-neutral-300 font-medium bg-black/40 px-3 py-1.5 rounded-lg backdrop-blur-sm">{movie.runtime} دقيقة</span>}
+              </div>
+
+              {movie.genres.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {movie.genres.map((g: any) => (
+                    <span key={g.id} className="bg-red-600/20 text-red-100 border border-red-500/30 rounded-full px-4 py-1 text-xs font-bold tracking-wide">
+                      {g.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              {movie.overview && <p className="text-neutral-300 leading-relaxed max-w-3xl drop-shadow">{movie.overview}</p>}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="animate-slide-up">
-        <ServerSwitcher servers={servers} />
+      {/* Video Player Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 md:mt-10 relative z-20">
+        <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <ServerSwitcher servers={servers} />
+        </div>
       </div>
     </div>
   );

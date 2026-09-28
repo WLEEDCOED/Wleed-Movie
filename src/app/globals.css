@@ -52,10 +52,10 @@
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 5px rgba(220, 38, 38, 0.3);
   }
   50% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.6);
   }
 }
 
@@ -86,12 +86,12 @@
 
 .card-hover:hover {
   transform: translateY(-8px) scale(1.02) translateZ(0);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(220, 38, 38, 0.2);
 }
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+  background: linear-gradient(135deg, #f87171, #dc2626, #991b1b);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -99,10 +99,10 @@
 
 /* Glass effect */
 .glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   transform: translateZ(0);
 }
 

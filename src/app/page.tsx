@@ -3,6 +3,7 @@ import { getTrending, getTrendingTV, getTrendingMovies, searchMulti, getImageUrl
 import type { TMDBTrending } from '@/lib/tmdb';
 import SearchForm from '@/components/SearchForm';
 import NetworkFilters, { PROVIDERS } from '@/components/NetworkFilters';
+import HeroBanner from '@/components/HeroBanner';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ function Section({ title, items, showAll }: { title: string; items: TMDBTrending
     <section className="mb-12">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold flex items-center gap-2">
-          <span className="w-1.5 h-7 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full" />
+          <span className="w-1.5 h-7 bg-gradient-to-b from-red-600 to-red-800 rounded-full" />
           {title}
         </h2>
         {showAll && (
@@ -59,26 +60,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   }
 
   const activeProvider = PROVIDERS.find(n => n.id === providerId);
+  const heroItem = trending.length > 0 ? trending[0] : null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Hero Section */}
-      <section className="mb-12">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-900/40 via-purple-900/30 to-neutral-950 p-8 md:p-12 border border-neutral-800/50">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.15),transparent_50%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(168,85,247,0.1),transparent_50%)]" />
-          <div className="relative z-10">
-            <h1 className="text-3xl md:text-5xl font-black mb-4 gradient-text">
-              {activeProvider ? `أعمال ${activeProvider.name}` : 'WleedMovie'}
-            </h1>
-            <p className="text-lg md:text-xl text-neutral-300 mb-8 max-w-2xl">
-              شاهد أحدث المسلسلات والأفلام العالمية بجودة عالية.
-            </p>
+    <div className="w-full">
+      {!query && heroItem && (
+        <HeroBanner item={heroItem} />
+      )}
 
-            <SearchForm />
-          </div>
-        </div>
-      </section>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 -mt-10 relative z-20">
 
       {!query && <NetworkFilters activeProviderId={providerId} baseUrl="/" />}
 
@@ -114,6 +104,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </>
         )
       )}
+      </div>
     </div>
   );
 }
