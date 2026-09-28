@@ -3,7 +3,7 @@ import Link from 'next/link';
 export const PROVIDERS = [
   { id: 8, name: 'Netflix', color: 'from-red-600 to-red-900', hoverBorder: 'hover:border-red-500', shadow: 'shadow-red-900/40', short: 'Netflix' },
   { id: 350, name: 'Apple TV+', color: 'from-slate-700 to-black', hoverBorder: 'hover:border-slate-400', shadow: 'shadow-slate-700/40', short: 'Apple' },
-  { id: 384, name: 'HBO Max', color: 'from-purple-600 to-indigo-900', hoverBorder: 'hover:border-purple-500', shadow: 'shadow-purple-900/40', short: 'HBO' },
+  { id: 1899, name: 'HBO Max', color: 'from-purple-600 to-indigo-900', hoverBorder: 'hover:border-purple-500', shadow: 'shadow-purple-900/40', short: 'HBO' },
   { id: 9, name: 'Amazon', color: 'from-blue-500 to-cyan-800', hoverBorder: 'hover:border-blue-400', shadow: 'shadow-blue-900/40', short: 'Amazon' },
   { id: 337, name: 'Disney+', color: 'from-blue-700 to-blue-900', hoverBorder: 'hover:border-blue-500', shadow: 'shadow-blue-900/40', short: 'Disney' },
 ];
