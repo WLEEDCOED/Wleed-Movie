@@ -82,11 +82,14 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform;
   transform: translateZ(0);
+  touch-action: manipulation;
 }
 
-.card-hover:hover {
-  transform: translateY(-8px) scale(1.02) translateZ(0);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(220, 38, 38, 0.2);
+@media (hover: hover) {
+  .card-hover:hover {
+    transform: translateY(-6px) scale(1.02) translateZ(0);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(220, 38, 38, 0.2);
+  }
 }
 
 /* Gradient text */
@@ -137,6 +140,21 @@
 body {
   background: #0a0a0a;
   color: #fafafa;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+/* Better scrollbar on mobile */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+/* Safe area padding for notched phones */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Selection */

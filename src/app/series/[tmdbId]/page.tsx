@@ -55,7 +55,7 @@ export default async function SeriesPage({ params }: PageProps) {
   return (
     <div className="w-full">
       {/* Full Bleed Backdrop */}
-      <div className="relative w-full h-[60vh] md:h-[75vh] flex items-end pb-12">
+      <div className="relative w-full h-[50vh] sm:h-[60vh] md:h-[75vh] flex items-end pb-8 sm:pb-12">
         <div className="absolute inset-0 z-0">
           {backdrop && (
             /* eslint-disable-next-line @next/next/no-img-element */
@@ -79,34 +79,34 @@ export default async function SeriesPage({ params }: PageProps) {
             
             {/* Info */}
             <div className="flex-1 animate-slide-up">
-              <div className="flex items-center gap-2 text-sm text-neutral-400 mb-2">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-neutral-400 mb-2">
                 <Link href="/" className="hover:text-white transition-colors">الرئيسية</Link>
                 <span>/</span>
-                <span className="text-white">{series.name}</span>
+                <span className="text-white truncate max-w-[150px] sm:max-w-none">{series.name}</span>
               </div>
-              <h1 className="text-4xl md:text-5xl font-black mb-4 text-white drop-shadow-md">{series.name}</h1>
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-black mb-3 sm:mb-4 text-white drop-shadow-md leading-tight">{series.name}</h1>
               
-              <div className="flex flex-wrap items-center gap-4 mb-4 text-sm">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 sm:mb-4 text-xs sm:text-sm">
                 {series.vote_average > 0 && (
-                  <span className="flex items-center gap-1 text-yellow-500 font-bold bg-black/40 px-3 py-1.5 rounded-lg backdrop-blur-sm">
+                  <span className="flex items-center gap-1 text-yellow-500 font-bold bg-black/40 px-2.5 py-1 rounded-lg backdrop-blur-sm">
                     ⭐ {series.vote_average.toFixed(1)}
                   </span>
                 )}
-                <span className="text-neutral-300 font-medium bg-black/40 px-3 py-1.5 rounded-lg backdrop-blur-sm">{series.number_of_seasons} مواسم</span>
-                <span className="text-neutral-300 font-medium bg-black/40 px-3 py-1.5 rounded-lg backdrop-blur-sm">{series.number_of_episodes} حلقة</span>
+                <span className="text-neutral-300 font-medium bg-black/40 px-2.5 py-1 rounded-lg backdrop-blur-sm">{series.number_of_seasons} مواسم</span>
+                <span className="text-neutral-300 font-medium bg-black/40 px-2.5 py-1 rounded-lg backdrop-blur-sm">{series.number_of_episodes} حلقة</span>
               </div>
 
               {series.genres.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-6">
+                <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
                   {series.genres.map((g: any) => (
-                    <span key={g.id} className="bg-red-600/20 text-red-100 border border-red-500/30 rounded-full px-4 py-1 text-xs font-bold tracking-wide">
+                    <span key={g.id} className="bg-red-600/20 text-red-100 border border-red-500/30 rounded-full px-3 py-0.5 text-[11px] sm:text-xs font-bold tracking-wide">
                       {g.name}
                     </span>
                   ))}
                 </div>
               )}
               
-              {series.overview && <p className="text-neutral-300 leading-relaxed max-w-3xl drop-shadow">{series.overview}</p>}
+              {series.overview && <p className="hidden sm:block text-neutral-300 leading-relaxed max-w-3xl drop-shadow text-sm sm:text-base">{series.overview}</p>}
             </div>
           </div>
         </div>

@@ -11,17 +11,17 @@ import MediaCard from '@/components/MediaCard';
 
 function Section({ title, items, showAll }: { title: string; items: TMDBTrending[]; showAll?: string }) {
   return (
-    <section className="mb-12">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <span className="w-1.5 h-7 bg-gradient-to-b from-red-600 to-red-800 rounded-full" />
+    <section className="mb-10 sm:mb-12">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <h2 className="text-lg sm:text-2xl font-bold flex items-center gap-2">
+          <span className="w-1 sm:w-1.5 h-5 sm:h-7 bg-gradient-to-b from-red-600 to-red-800 rounded-full" />
           {title}
         </h2>
         {showAll && (
-          <span className="text-sm text-neutral-500">{items.length} عنصر</span>
+          <span className="text-xs sm:text-sm text-neutral-500">{items.length} عنصر</span>
         )}
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-5">
+      <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
         {items.slice(0, 18).map((item, index) => (
           <MediaCard key={`${item.media_type}-${item.id}`} item={item} index={index} />
         ))}
@@ -68,7 +68,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <HeroBanner item={heroItem} />
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 -mt-10 relative z-20">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 -mt-8 sm:-mt-10 relative z-20">
 
       {!query && <NetworkFilters activeProviderId={providerId} baseUrl="/" />}
 
