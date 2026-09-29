@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import PlayerFrame from './PlayerFrame';
 
 interface Server {
   id: string;
@@ -135,22 +136,8 @@ export default function ServerSwitcher({
 
   return (
     <div className="space-y-4">
-      <div className="relative rounded-2xl overflow-hidden bg-black border border-neutral-800/50 shadow-2xl shadow-black/50">
-        <div className="aspect-video relative">
-          {activeServer ? (
-            <iframe
-              key={activeServer.id}
-              src={activeServer.embedUrl}
-              className="w-full h-full"
-              allowFullScreen
-              referrerPolicy="origin"
-              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <p className="text-neutral-500">اختر خادماً للمشاهدة</p>
-            </div>
-          )}
+      {activeServer ? (
+        <PlayerFrame src={activeServer.embedUrl} title={`مشغل ${activeServer.name}`}>
           {activeSubtitle && subtitleEnabled && currentText && (
             <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none z-10">
               <span className="inline-block bg-black/80 text-white text-lg md:text-xl px-5 py-2.5 rounded-lg shadow-lg backdrop-blur-sm">
@@ -158,16 +145,20 @@ export default function ServerSwitcher({
               </span>
             </div>
           )}
-        </div>
-        {activeServer && (
-          <div className="absolute top-3 right-3 z-10">
+          <div className="absolute top-3 right-3 z-10 pointer-events-none">
             <div className="glass rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               <span>مباشر</span>
             </div>
           </div>
-        )}
-      </div>
+        </PlayerFrame>
+      ) : (
+        <div className="relative rounded-2xl overflow-hidden bg-black border border-neutral-800/50 shadow-2xl shadow-black/50">
+          <div className="aspect-video relative flex items-center justify-center">
+            <p className="text-neutral-500">اختر خادماً للمشاهدة</p>
+          </div>
+        </div>
+      )}
 
       {subtitles.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap">

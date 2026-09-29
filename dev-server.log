@@ -1,0 +1,385 @@
+
+> cinema@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.141.128.240:3000
+- Environments: .env
+✓ Ready in 961ms
+✓ Running next.config.ts took 43ms
+
+ GET /series/95350 200 in 2.5s (next.js: 1212ms, application-code: 1316ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <RenderFromTemplateContext>
+      <ScrollAndMaybeFocusHandler cacheNode={{rsc:{...}, ...}}>
+        <InnerScrollHandlerNew focusAndScrollRef={{scrollRef:null, ...}} cacheNode={{rsc:{...}, ...}}>
+          <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+            <LoadingBoundary name="95350/" loading={[...]}>
+              <Suspense name="95350/" fallback={<Fragment>}>
+                <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+                  <RedirectBoundary>
+                    <RedirectErrorBoundary router={{...}}>
+                      <InnerLayoutRouter url="/series/95350" tree={[...]} params={{tmdbId:"95350"}} ...>
+                        <SegmentViewNode type="page" pagePath="series/[tm...">
+                          <SegmentTrieNode>
+                          <SeriesPage>
+                            <div
+                              className="w-full"
+-                             bis_skin_checked="1"
+                            >
+                              <div
+                                className="relative w-full h-[50vh] sm:h-[60vh] md:h-[75vh] flex items-end pb-8 sm:pb-12"
+-                               bis_skin_checked="1"
+                              >
+                                <div
+                                  className="absolute inset-0 z-0"
+-                                 bis_skin_checked="1"
+                                >
+                                <div
+                                  className="absolute inset-0 z-0 bg-gradient-to-r from-black via-black/80 to-transparent"
+-                                 bis_skin_checked="1"
+                                >
+                                <div
+                                  className="absolute inset-0 z-0 bg-gradient-to-t from-black via-black/40 to-transparent"
+-                                 bis_skin_checked="1"
+                                >
+                                <div
+                                  className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+-                                 bis_skin_checked="1"
+                                >
+                                  <div
+                                    className="flex flex-col md:flex-row gap-8 items-end md:items-stretch"
+-                                   bis_skin_checked="1"
+                                  >
+                                    <div
+                                      className="hidden md:block w-56 flex-shrink-0 -mb-20 z-20"
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="aspect-[2/3] rounded-xl overflow-hidden border border-neutral-800/5..."
+-                                       bis_skin_checked="1"
+                                      >
+                                    <div
+                                      className="flex-1 animate-slide-up"
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="flex items-center gap-2 text-xs sm:text-sm text-neutral-400 mb-2"
+-                                       bis_skin_checked="1"
+                                      >
+                                      <h1>
+                                      <div
+                                        className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 sm:mb-4 text-xs sm:..."
+-                                       bis_skin_checked="1"
+                                      >
+                                      <div
+                                        className="flex flex-wrap gap-2 mb-4 sm:mb-6"
+-                                       bis_skin_checked="1"
+                                      >
+                                      ...
+                              <div
+                                className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 md:mt-10 relative z-20"
+-                               bis_skin_checked="1"
+                              >
+                                <section className="mb-12 anim..." style={{...}}>
+                                  <h2>
+                                  <div
+                                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-c..."
+-                                   bis_skin_checked="1"
+                                  >
+                                    <LinkComponent>
+                                      <LinkComponent href="/watch/tv/..." className="group bloc...">
+                                        <a className="group bloc..." ref={function} onClick={function onClick} ...>
+                                          <div
+                                            className="flex flex-col gap-2"
+-                                           bis_skin_checked="1"
+                                          >
+                                            <div
+                                              className="relative rounded-xl overflow-hidden bg-neutral-900 border bor..."
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="aspect-video relative overflow-hidden bg-neutral-900"
+-                                               bis_skin_checked="1"
+                                              >
+                                                <img>
+                                                <div
+                                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacit..."
+-                                                 bis_skin_checked="1"
+                                                >
+                                                  <div
+                                                    className="w-10 h-10 rounded-full bg-red-600/90 text-white flex it..."
+-                                                   bis_skin_checked="1"
+                                                  >
+                                            <div
+                                              className="px-1 flex flex-col gap-0.5"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between text-[11px] font-mono tex..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              ...
+                                    <LinkComponent>
+                                      <LinkComponent href="/watch/tv/..." className="group bloc...">
+                                        <a className="group bloc..." ref={function} onClick={function onClick} ...>
+                                          <div
+                                            className="flex flex-col gap-2"
+-                                           bis_skin_checked="1"
+                                          >
+                                            <div
+                                              className="relative rounded-xl overflow-hidden bg-neutral-900 border bor..."
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="aspect-video relative overflow-hidden bg-neutral-900"
+-                                               bis_skin_checked="1"
+                                              >
+                                                <img>
+                                                <div
+                                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacit..."
+-                                                 bis_skin_checked="1"
+                                                >
+                                                  <div
+                                                    className="w-10 h-10 rounded-full bg-red-600/90 text-white flex it..."
+-                                                   bis_skin_checked="1"
+                                                  >
+                                            <div
+                                              className="px-1 flex flex-col gap-0.5"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between text-[11px] font-mono tex..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              ...
+                                    <LinkComponent>
+                                      <LinkComponent href="/watch/tv/..." className="group bloc...">
+                                        <a className="group bloc..." ref={function} onClick={function onClick} ...>
+                                          <div
+                                            className="flex flex-col gap-2"
+-                                           bis_skin_checked="1"
+                                          >
+                                            <div
+                                              className="relative rounded-xl overflow-hidden bg-neutral-900 border bor..."
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="aspect-video relative overflow-hidden bg-neutral-900"
+-                                               bis_skin_checked="1"
+                                              >
+                                                <img>
+                                                <div
+                                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacit..."
+-                                                 bis_skin_checked="1"
+                                                >
+                                                  <div
+                                                    className="w-10 h-10 rounded-full bg-red-600/90 text-white flex it..."
+-                                                   bis_skin_checked="1"
+                                                  >
+                                            <div
+                                              className="px-1 flex flex-col gap-0.5"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between text-[11px] font-mono tex..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              ...
+                                    <LinkComponent>
+                                      <LinkComponent href="/watch/tv/..." className="group bloc...">
+                                        <a className="group bloc..." ref={function} onClick={function onClick} ...>
+                                          <div
+                                            className="flex flex-col gap-2"
+-                                           bis_skin_checked="1"
+                                          >
+                                            <div
+                                              className="relative rounded-xl overflow-hidden bg-neutral-900 border bor..."
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="aspect-video relative overflow-hidden bg-neutral-900"
+-                                               bis_skin_checked="1"
+                                              >
+                                                <img>
+                                                <div
+                                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacit..."
+-                                                 bis_skin_checked="1"
+                                                >
+                                                  <div
+                                                    className="w-10 h-10 rounded-full bg-red-600/90 text-white flex it..."
+-                                                   bis_skin_checked="1"
+                                                  >
+                                            <div
+                                              className="px-1 flex flex-col gap-0.5"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between text-[11px] font-mono tex..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              ...
+                                    <LinkComponent>
+                                      <LinkComponent href="/watch/tv/..." className="group bloc...">
+                                        <a className="group bloc..." ref={function} onClick={function onClick} ...>
+                                          <div
+                                            className="flex flex-col gap-2"
+-                                           bis_skin_checked="1"
+                                          >
+                                            <div
+                                              className="relative rounded-xl overflow-hidden bg-neutral-900 border bor..."
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="aspect-video relative overflow-hidden bg-neutral-900"
+-                                               bis_skin_checked="1"
+                                              >
+                                                <img>
+                                                <div
+                                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacit..."
+-                                                 bis_skin_checked="1"
+                                                >
+                                                  <div
+                                                    className="w-10 h-10 rounded-full bg-red-600/90 text-white flex it..."
+-                                                   bis_skin_checked="1"
+                                                  >
+                                            <div
+                                              className="px-1 flex flex-col gap-0.5"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between text-[11px] font-mono tex..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              ...
+                                    <LinkComponent>
+                                      <LinkComponent href="/watch/tv/..." className="group bloc...">
+                                        <a className="group bloc..." ref={function} onClick={function onClick} ...>
+                                          <div
+                                            className="flex flex-col gap-2"
+-                                           bis_skin_checked="1"
+                                          >
+                                            <div
+                                              className="relative rounded-xl overflow-hidden bg-neutral-900 border bor..."
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="aspect-video relative overflow-hidden bg-neutral-900"
+-                                               bis_skin_checked="1"
+                                              >
+                                                <img>
+                                                <div
+                                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacit..."
+-                                                 bis_skin_checked="1"
+                                                >
+                                                  <div
+                                                    className="w-10 h-10 rounded-full bg-red-600/90 text-white flex it..."
+-                                                   bis_skin_checked="1"
+                                                  >
+                                            <div
+                                              className="px-1 flex flex-col gap-0.5"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between text-[11px] font-mono tex..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              ...
+                                    <LinkComponent>
+                                      <LinkComponent href="/watch/tv/..." className="group bloc...">
+                                        <a className="group bloc..." ref={function} onClick={function onClick} ...>
+                                          <div
+                                            className="flex flex-col gap-2"
+-                                           bis_skin_checked="1"
+                                          >
+                                            <div
+                                              className="relative rounded-xl overflow-hidden bg-neutral-900 border bor..."
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="aspect-video relative overflow-hidden bg-neutral-900"
+-                                               bis_skin_checked="1"
+                                              >
+                                                <img>
+                                                <div
+                                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacit..."
+-                                                 bis_skin_checked="1"
+                                                >
+                                                  <div
+                                                    className="w-10 h-10 rounded-full bg-red-600/90 text-white flex it..."
+-                                                   bis_skin_checked="1"
+                                                  >
+                                            <div
+                                              className="px-1 flex flex-col gap-0.5"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between text-[11px] font-mono tex..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              ...
+                                    <LinkComponent>
+                                      <LinkComponent href="/watch/tv/..." className="group bloc...">
+                                        <a className="group bloc..." ref={function} onClick={function onClick} ...>
+                                          <div
+                                            className="flex flex-col gap-2"
+-                                           bis_skin_checked="1"
+                                          >
+                                            <div
+                                              className="relative rounded-xl overflow-hidden bg-neutral-900 border bor..."
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="aspect-video relative overflow-hidden bg-neutral-900"
+-                                               bis_skin_checked="1"
+                                              >
+                                                <div
+                                                  className="w-full h-full flex items-center justify-center text-neutr..."
+-                                                 bis_skin_checked="1"
+                                                >
+                                                <div
+                                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacit..."
+-                                                 bis_skin_checked="1"
+                                                >
+                                                  <div
+                                                    className="w-10 h-10 rounded-full bg-red-600/90 text-white flex it..."
+-                                                   bis_skin_checked="1"
+                                                  >
+                                            <div
+                                              className="px-1 flex flex-col gap-0.5"
+-                                             bis_skin_checked="1"
+                                            >
+                                              <div
+                                                className="flex items-center justify-between text-[11px] font-mono tex..."
+-                                               bis_skin_checked="1"
+                                              >
+                                              ...
+                        ...
+                      ...
+          ...
+ 
+ GET /watch/tv/95350/1/1 200 in 1143ms (next.js: 1023ms, application-code: 119ms)
+ GET / 200 in 545ms (next.js: 72ms, application-code: 474ms)
+ GET / 200 in 396ms (next.js: 11ms, application-code: 385ms)
+ GET / 200 in 453ms (next.js: 8ms, application-code: 445ms)
+⚠ Found a change in next.config.ts. Restarting the server to apply the changes...
+▲ Next.js 16.3.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://169.254.243.3:3000
+- Environments: .env
+✓ Ready in 1189ms
+✓ Running next.config.ts took 54ms
+

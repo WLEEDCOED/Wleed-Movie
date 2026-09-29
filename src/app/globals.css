@@ -144,6 +144,19 @@ body {
   overflow-x: hidden;
 }
 
+/* Fullscreen fallback used on browsers without the Fullscreen API (iOS / iPadOS
+   Safari): while a player is expanded the page is locked and the site chrome is
+   hidden so the player fills the whole screen. */
+html.player-expanded,
+html.player-expanded body {
+  overflow: hidden !important;
+}
+
+html.player-expanded header,
+html.player-expanded footer {
+  display: none !important;
+}
+
 /* Better scrollbar on mobile */
 @media (max-width: 768px) {
   ::-webkit-scrollbar {

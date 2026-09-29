@@ -1,5 +1,16 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
+
+// Keep the page zoomable (pinch zoom / double tap on iPad, Ctrl + scroll on
+// laptops) and let the layout use the whole screen on notched iPads.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: 'cover',
+  themeColor: '#0a0a0a',
+};
 
 export const metadata: Metadata = {
   title: 'WleedMovie | مشاهدة المسلسلات مترجمة',
