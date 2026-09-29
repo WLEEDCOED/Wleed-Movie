@@ -4,7 +4,7 @@ import { TMDBTrending, getImageUrl, getTitle, getLink } from '@/lib/tmdb';
 export default function HeroBanner({ item }: { item: TMDBTrending }) {
   if (!item) return null;
 
-  const backdropUrl = getImageUrl(item.backdrop_path, 'original');
+  const backdropUrl = getImageUrl(item.backdrop_path, 'w1280');
   const title = getTitle(item);
   const link = getLink(item);
 

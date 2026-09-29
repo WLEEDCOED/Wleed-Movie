@@ -383,3 +383,4 @@ https://react.dev/link/hydration-mismatch
 ✓ Ready in 1189ms
 ✓ Running next.config.ts took 54ms
 
+ GET / 200 in 2.5s (next.js: 1032ms, application-code: 1442ms)

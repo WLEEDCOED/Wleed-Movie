@@ -32,9 +32,9 @@ export default function Navbar() {
   return (
     <>
       <header
-        className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        className={`fixed top-0 w-full z-50 transition-colors duration-200 ${
           isScrolled || menuOpen
-            ? 'bg-black/95 backdrop-blur-md shadow-lg shadow-red-900/10 py-3'
+            ? 'bg-black/95 shadow-lg shadow-red-900/10 py-3'
             : 'bg-gradient-to-b from-black/80 to-transparent py-4'
         }`}
       >
