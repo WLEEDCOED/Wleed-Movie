@@ -18,6 +18,14 @@ export function generateTVServers(tmdbId: number, season: number, episode: numbe
       language: 'مترجم',
     },
     {
+      id: 'cinesrc',
+      name: 'CineSrc',
+      embedUrl: `https://cinesrc.st/embed/tv/${tmdbId}?s=${season}&e=${episode}`,
+      quality: '1080p',
+      isTrusted: false,
+      language: 'مترجم',
+    },
+    {
       id: 'vidlink',
       name: 'VidLink',
       embedUrl: `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}?primaryColor=dc2626&secondaryColor=991b1b`,
@@ -44,6 +52,14 @@ export function generateMovieServers(tmdbId: number): StreamServer[] {
       embedUrl: `https://vidstuck.xyz/embed/movie/${tmdbId}`,
       quality: '1080p',
       isTrusted: true,
+      language: 'مترجم',
+    },
+    {
+      id: 'cinesrc',
+      name: 'CineSrc',
+      embedUrl: `https://cinesrc.st/embed/movie/${tmdbId}`,
+      quality: '1080p',
+      isTrusted: false,
       language: 'مترجم',
     },
     {
