@@ -49,7 +49,7 @@ export default async function SeriesPage({ searchParams }: { searchParams: Promi
   if (query) pageTitle = `نتائج: ${query}`;
   else if (activeProvider && activeGenre) pageTitle = `${activeGenre.name} • ${activeProvider.short}`;
   else if (activeProvider) pageTitle = `مسلسلات ${activeProvider.short}`;
-  else if (activeGenre) pageTitle = `${activeGenre.emoji} ${activeGenre.name}`;
+  else if (activeGenre) pageTitle = activeGenre.name;
   else if (year) pageTitle = `مسلسلات ${year}`;
 
   return (
