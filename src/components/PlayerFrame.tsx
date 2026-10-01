@@ -186,6 +186,7 @@ export default function PlayerFrame({ src, title, children }: PlayerFrameProps) 
           src={src}
           title={title}
           className="w-full h-full"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           allowFullScreen
           referrerPolicy="origin"
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
