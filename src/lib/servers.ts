@@ -33,14 +33,6 @@ export function generateTVServers(tmdbId: number, season: number, episode: numbe
       isTrusted: false,
       language: 'مترجم',
     },
-    {
-      id: 'vidsrc-pro',
-      name: 'VidSrc Pro',
-      embedUrl: `https://vidsrc.pro/embed/tv/${tmdbId}/${season}/${episode}`,
-      quality: '1080p',
-      isTrusted: false,
-      language: 'مترجم',
-    },
   ];
 }
 
@@ -66,14 +58,6 @@ export function generateMovieServers(tmdbId: number): StreamServer[] {
       id: 'vidlink',
       name: 'VidLink',
       embedUrl: `https://vidlink.pro/movie/${tmdbId}?primaryColor=dc2626&secondaryColor=991b1b`,
-      quality: '1080p',
-      isTrusted: false,
-      language: 'مترجم',
-    },
-    {
-      id: 'vidsrc-pro',
-      name: 'VidSrc Pro',
-      embedUrl: `https://vidsrc.pro/embed/movie/${tmdbId}`,
       quality: '1080p',
       isTrusted: false,
       language: 'مترجم',
