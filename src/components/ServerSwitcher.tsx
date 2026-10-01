@@ -212,7 +212,6 @@ export default function ServerSwitcher({
                   : 'bg-neutral-900/80 text-neutral-300 hover:text-white hover:bg-neutral-800 border border-neutral-800'
               }`}
             >
-              {server.isTrusted && <span>✨</span>}
               <span>{server.name}</span>
             </button>
           ))}
