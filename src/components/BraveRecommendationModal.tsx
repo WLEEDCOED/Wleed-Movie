@@ -17,27 +17,12 @@ export default function BraveRecommendationModal() {
       // LocalStorage access restricted in some private modes
     }
 
-    // Check if user is already using Brave
-    const checkBrave = async () => {
-      try {
-        const nav = navigator as unknown as { brave?: { isBrave?: () => Promise<boolean> } };
-        if (typeof nav.brave?.isBrave === 'function') {
-          const isBrave = await nav.brave.isBrave();
-          if (isBrave) return; // Already on Brave, no need to show
-        }
-      } catch {
-        // Ignore detection errors
-      }
+    // Show after a brief delay so the page loads smoothly
+    const timer = setTimeout(() => {
+      setIsOpen(true);
+    }, 500);
 
-      // Show after a brief gentle delay so the page loads first
-      const timer = setTimeout(() => {
-        setIsOpen(true);
-      }, 1200);
-
-      return () => clearTimeout(timer);
-    };
-
-    checkBrave();
+    return () => clearTimeout(timer);
   }, []);
 
   const handleClose = () => {
