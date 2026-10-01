@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 };
 
 import Navbar from '@/components/Navbar';
+import BraveRecommendationModal from '@/components/BraveRecommendationModal';
 
 export default function RootLayout({
   children,
@@ -44,6 +45,7 @@ export default function RootLayout({
         className="min-h-screen bg-black text-white antialiased selection:bg-red-500/30"
         style={{ fontFamily: 'Tajawal, sans-serif' }}
       >
+        <BraveRecommendationModal />
         <Navbar />
 
         {/* Main Content */}
