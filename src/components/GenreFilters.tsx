@@ -67,8 +67,8 @@ export default function GenreFilters({
           href={buildUrl({ year: activeYear })}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
             !activeGenre
-              ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/30'
-              : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-violet-400 hover:text-violet-600'
+              ? 'bg-red-600/20 text-red-400 border-red-500/50'
+              : 'border-neutral-700 text-neutral-400 hover:border-red-500/50 hover:text-red-400'
           }`}
         >
           الكل
@@ -79,8 +79,8 @@ export default function GenreFilters({
             href={buildUrl({ genre: activeGenre === g.id ? null : g.id, year: activeYear })}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
               activeGenre === g.id
-                ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/30'
-                : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-violet-400 hover:text-violet-600'
+                ? 'bg-red-600/20 text-red-400 border-red-500/50'
+                : 'border-neutral-700 text-neutral-400 hover:border-red-500/50 hover:text-red-400'
             }`}
           >
             <span>{g.emoji}</span>
@@ -95,8 +95,8 @@ export default function GenreFilters({
           href={buildUrl({ genre: activeGenre })}
           className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
             !activeYear
-              ? 'bg-cyan-500 text-white border-cyan-500 shadow-lg shadow-cyan-500/30'
-              : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-cyan-400 hover:text-cyan-600'
+              ? 'bg-neutral-700/60 text-white border-neutral-600'
+              : 'border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white'
           }`}
         >
           كل السنوات
@@ -107,8 +107,8 @@ export default function GenreFilters({
             href={buildUrl({ genre: activeGenre, year: activeYear === y ? null : y })}
             className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
               activeYear === y
-                ? 'bg-cyan-500 text-white border-cyan-500 shadow-lg shadow-cyan-500/30'
-                : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-cyan-400 hover:text-cyan-600'
+                ? 'bg-neutral-700/60 text-white border-neutral-600'
+                : 'border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white'
             }`}
           >
             {y}

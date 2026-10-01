@@ -45,7 +45,7 @@ export default function Pagination({ currentPage, totalPages, baseUrl, searchPar
       {currentPage > 1 ? (
         <Link
           href={buildUrl(currentPage - 1)}
-          className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:border-violet-400 hover:text-violet-600 dark:hover:text-violet-400 transition-all"
+          className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-semibold border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white transition-all"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -53,7 +53,7 @@ export default function Pagination({ currentPage, totalPages, baseUrl, searchPar
           السابق
         </Link>
       ) : (
-        <span className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-semibold text-zinc-300 dark:text-zinc-600 cursor-not-allowed">
+        <span className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-semibold text-neutral-700 cursor-not-allowed">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
@@ -71,8 +71,8 @@ export default function Pagination({ currentPage, totalPages, baseUrl, searchPar
             href={buildUrl(page)}
             className={`w-9 h-9 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
               page === currentPage
-                ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/30'
-                : 'border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:border-violet-400 hover:text-violet-600 dark:hover:text-violet-400'
+                ? 'bg-red-600 text-white shadow-lg shadow-red-900/30'
+                : 'border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white'
             }`}
           >
             {page}
@@ -84,7 +84,7 @@ export default function Pagination({ currentPage, totalPages, baseUrl, searchPar
       {currentPage < totalPages ? (
         <Link
           href={buildUrl(currentPage + 1)}
-          className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:border-violet-400 hover:text-violet-600 dark:hover:text-violet-400 transition-all"
+          className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-semibold border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white transition-all"
         >
           التالي
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -92,7 +92,7 @@ export default function Pagination({ currentPage, totalPages, baseUrl, searchPar
           </svg>
         </Link>
       ) : (
-        <span className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-semibold text-zinc-300 dark:text-zinc-600 cursor-not-allowed">
+        <span className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-semibold text-neutral-700 cursor-not-allowed">
           التالي
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

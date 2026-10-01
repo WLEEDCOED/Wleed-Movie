@@ -1,11 +1,11 @@
 import Link from 'next/link';
 
 export const PROVIDERS = [
-  { id: 8,    name: 'Netflix',   color: 'from-red-500 to-red-700',      border: 'border-red-200 hover:border-red-400',   textActive: 'text-red-700 bg-red-50',   short: 'Netflix' },
-  { id: 350,  name: 'Apple TV+', color: 'from-zinc-700 to-black',        border: 'border-zinc-200 hover:border-zinc-400', textActive: 'text-zinc-800 bg-zinc-100', short: 'Apple' },
-  { id: 1899, name: 'HBO Max',   color: 'from-violet-600 to-indigo-800', border: 'border-violet-200 hover:border-violet-400', textActive: 'text-violet-700 bg-violet-50', short: 'HBO' },
-  { id: 9,    name: 'Amazon',    color: 'from-sky-500 to-blue-700',      border: 'border-sky-200 hover:border-sky-400',   textActive: 'text-sky-700 bg-sky-50',   short: 'Amazon' },
-  { id: 337,  name: 'Disney+',   color: 'from-blue-600 to-blue-900',     border: 'border-blue-200 hover:border-blue-400', textActive: 'text-blue-700 bg-blue-50', short: 'Disney+' },
+  { id: 8,    name: 'Netflix',   hoverBorder: 'hover:border-red-500',    activeColor: 'bg-red-600/20 text-red-400 border-red-500/60',    short: 'Netflix' },
+  { id: 350,  name: 'Apple TV+', hoverBorder: 'hover:border-slate-400',  activeColor: 'bg-slate-700/20 text-slate-300 border-slate-500/60', short: '+Apple TV' },
+  { id: 1899, name: 'HBO Max',   hoverBorder: 'hover:border-purple-500', activeColor: 'bg-purple-600/20 text-purple-400 border-purple-500/60', short: 'HBO Max' },
+  { id: 9,    name: 'Amazon',    hoverBorder: 'hover:border-blue-400',   activeColor: 'bg-blue-600/20 text-blue-400 border-blue-500/60',   short: 'Amazon' },
+  { id: 337,  name: 'Disney+',   hoverBorder: 'hover:border-blue-500',   activeColor: 'bg-blue-700/20 text-blue-400 border-blue-600/60',   short: '+Disney' },
 ];
 
 interface NetworkFiltersProps {
@@ -14,19 +14,14 @@ interface NetworkFiltersProps {
 }
 
 export default function NetworkFilters({ activeProviderId, baseUrl }: NetworkFiltersProps) {
-  const buildUrl = (id: number | null) => {
-    if (!id || id === activeProviderId) return baseUrl;
-    return `${baseUrl}?provider=${id}`;
-  };
-
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
       <Link
         href={baseUrl}
         className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold border transition-all ${
           !activeProviderId
-            ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
-            : 'border-zinc-200 text-zinc-500 hover:border-zinc-400 hover:text-zinc-800'
+            ? 'bg-white/10 text-white border-white/20'
+            : 'border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white'
         }`}
       >
         الكل
@@ -34,11 +29,11 @@ export default function NetworkFilters({ activeProviderId, baseUrl }: NetworkFil
       {PROVIDERS.map((p) => (
         <Link
           key={p.id}
-          href={buildUrl(p.id)}
+          href={activeProviderId === p.id ? baseUrl : `${baseUrl}?provider=${p.id}`}
           className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold border transition-all ${
             activeProviderId === p.id
-              ? `${p.textActive} border-current shadow-sm`
-              : `${p.border} text-zinc-500 hover:text-zinc-800`
+              ? p.activeColor
+              : `border-neutral-700 text-neutral-400 ${p.hoverBorder} hover:text-white`
           }`}
         >
           {p.short}

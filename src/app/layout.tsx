@@ -9,7 +9,7 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   viewportFit: 'cover',
-  themeColor: '#ffffff',
+  themeColor: '#0a0a0a',
 };
 
 export const metadata: Metadata = {
@@ -41,7 +41,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className="min-h-screen bg-zinc-50 text-zinc-900 antialiased selection:bg-violet-500/30 selection:text-violet-900"
+        className="min-h-screen bg-black text-white antialiased selection:bg-red-500/30"
         style={{ fontFamily: 'Tajawal, sans-serif' }}
       >
         <Navbar />
