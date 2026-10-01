@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 export const MOVIE_GENRES = [
   { id: 28,    name: 'أكشن' },
@@ -133,7 +133,6 @@ export default function GenreFilters({
   currentProvider,
 }: GenreFiltersProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const navigate = (newGenre: number | null, newYear: number | null) => {
     const params = new URLSearchParams();
