@@ -3,35 +3,53 @@
 import { useState, useEffect } from 'react';
 
 const STORAGE_KEY = 'wleed_hide_brave_notice';
+const SESSION_KEY = 'wleed_session_dismiss_brave';
 
 export default function BraveRecommendationModal() {
   const [isOpen, setIsOpen] = useState(false);
-  const [dontShowAgain, setDontShowAgain] = useState(true); // Default checked for user convenience
+  const [dontShowAgain, setDontShowAgain] = useState(false); // طافي (غير مفعل) افتراضياً كما طلب المستخدم
 
   useEffect(() => {
-    // Check if user already dismissed it forever
+    // 1. تحقق إذا كان المستخدم اختار سابقاً عدم إظهار الرسالة
     try {
-      const isHidden = localStorage.getItem(STORAGE_KEY);
-      if (isHidden === 'true') return;
+      if (localStorage.getItem(STORAGE_KEY) === 'true') return;
+      if (sessionStorage.getItem(SESSION_KEY) === 'true') return;
     } catch {
-      // LocalStorage access restricted in some private modes
+      // تجاهل أخطاء التخزين الخاص
     }
 
-    // Show after a brief delay so the page loads smoothly
-    const timer = setTimeout(() => {
-      setIsOpen(true);
-    }, 500);
+    // 2. تحقق إذا كان المستخدم يتصفح أصلاً من متصفح Brave
+    const checkBraveAndShow = async () => {
+      try {
+        const nav = navigator as unknown as { brave?: { isBrave?: () => Promise<boolean> } };
+        if (typeof nav.brave?.isBrave === 'function') {
+          const isBrave = await nav.brave.isBrave();
+          if (isBrave) return; // مستخدم Brave لا يحتاج الرسالة
+        }
+      } catch {
+        // تجاهل أي خطأ فحص
+      }
 
-    return () => clearTimeout(timer);
+      // إظهار الرسالة بعد نصف ثانية من تحميل الصفحة
+      const timer = setTimeout(() => {
+        setIsOpen(true);
+      }, 500);
+
+      return () => clearTimeout(timer);
+    };
+
+    checkBraveAndShow();
   }, []);
 
   const handleClose = () => {
-    if (dontShowAgain) {
-      try {
-        localStorage.setItem(STORAGE_KEY, 'true');
-      } catch {
-        // Ignore error
+    try {
+      if (dontShowAgain) {
+        localStorage.setItem(STORAGE_KEY, 'true'); // لن تظهر مجدداً أبداً
+      } else {
+        sessionStorage.setItem(SESSION_KEY, 'true'); // لن تتكرر في نفس الجلسة
       }
+    } catch {
+      // تجاهل الخطأ
     }
     setIsOpen(false);
   };
@@ -44,7 +62,7 @@ export default function BraveRecommendationModal() {
         className="relative w-full max-w-md bg-neutral-950 border border-neutral-800 rounded-2xl p-6 shadow-2xl shadow-red-950/20 text-center animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button top-left */}
+        {/* زر الإغلاق */}
         <button
           onClick={handleClose}
           className="absolute top-4 left-4 p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors"
@@ -55,23 +73,23 @@ export default function BraveRecommendationModal() {
           </svg>
         </button>
 
-        {/* Icon */}
+        {/* الأيقونة */}
         <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-orange-500/20 to-red-600/20 border border-orange-500/30 flex items-center justify-center text-3xl shadow-lg shadow-orange-500/10">
           🦁
         </div>
 
-        {/* Title */}
+        {/* العنوان */}
         <h3 className="text-xl font-black text-white mb-2">
           نصيحة لمشاهدة بدون إعلانات 🛡️
         </h3>
 
-        {/* Description */}
+        {/* الوصف */}
         <p className="text-sm text-neutral-300 leading-relaxed mb-5">
           للحصول على أفضل تجربة وتجنب النوافذ المنبثقة والإعلانات المزعجة نهائياً على الجوال أو الكمبيوتر، ننصحك بفتح الموقع عبر متصفح{' '}
           <span className="font-bold text-orange-400">Brave</span> المجاني.
         </p>
 
-        {/* Don't show again checkbox */}
+        {/* خيار عدم الإظهار مرة أخرى (طافي افتراضياً) */}
         <label className="flex items-center justify-center gap-2 cursor-pointer select-none text-xs text-neutral-400 hover:text-neutral-200 transition-colors mb-5">
           <input
             type="checkbox"
@@ -82,7 +100,7 @@ export default function BraveRecommendationModal() {
           <span>عدم إظهار هذه الرسالة مرة أخرى</span>
         </label>
 
-        {/* Buttons */}
+        {/* الأزرار */}
         <div className="flex flex-col sm:flex-row gap-2.5">
           <a
             href="https://brave.com/download/"
