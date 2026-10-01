@@ -3,41 +3,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export const MOVIE_GENRES = [
-  { id: 28,    name: 'أكشن' },
-  { id: 35,    name: 'كوميدي' },
-  { id: 18,    name: 'دراما' },
-  { id: 27,    name: 'رعب' },
-  { id: 10749, name: 'رومانسي' },
-  { id: 878,   name: 'خيال علمي' },
-  { id: 53,    name: 'إثارة' },
-  { id: 16,    name: 'أنيمي' },
-  { id: 12,    name: 'مغامرة' },
-  { id: 80,    name: 'جريمة' },
-  { id: 99,    name: 'وثائقي' },
-  { id: 14,    name: 'فانتازيا' },
-];
-
-export const TV_GENRES = [
-  { id: 10759, name: 'أكشن' },
-  { id: 35,    name: 'كوميدي' },
-  { id: 18,    name: 'دراما' },
-  { id: 9648,  name: 'غموض' },
-  { id: 10765, name: 'خيال علمي' },
-  { id: 10768, name: 'حرب' },
-  { id: 10749, name: 'رومانسي' },
-  { id: 16,    name: 'أنيمي' },
-  { id: 80,    name: 'جريمة' },
-  { id: 99,    name: 'وثائقي' },
-  { id: 10764, name: 'ريالتي' },
-  { id: 10751, name: 'عائلي' },
-];
-
-const currentYear = new Date().getFullYear();
-export const YEARS = Array.from({ length: 30 }, (_, i) => currentYear - i);
+interface Genre {
+  id: number;
+  name: string;
+}
 
 interface GenreFiltersProps {
-  genres: { id: number; name: string }[];
+  genres: Genre[];
   activeGenre?: number | null;
   activeYear?: number | null;
   baseUrl: string;
@@ -58,7 +30,6 @@ function Dropdown({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -92,7 +63,6 @@ function Dropdown({
 
       {open && (
         <div className="absolute top-full mt-1.5 right-0 z-50 w-44 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl shadow-black/60 overflow-hidden">
-          {/* Reset option */}
           <button
             onClick={() => { onSelect(null); setOpen(false); }}
             className={`w-full text-right px-4 py-2.5 text-sm transition-colors ${
@@ -143,7 +113,9 @@ export default function GenreFilters({
     router.push(qs ? `${baseUrl}?${qs}` : baseUrl);
   };
 
-  const yearItems = YEARS.map(y => ({ id: y, name: String(y) }));
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
+  const yearItems = years.map(y => ({ id: y, name: String(y) }));
 
   return (
     <div className="flex items-center gap-2 mb-5 flex-wrap">
@@ -160,7 +132,6 @@ export default function GenreFilters({
         onSelect={(id) => navigate(activeGenre ?? null, id)}
       />
 
-      {/* Clear all button — only show when something is active */}
       {(activeGenre || activeYear) && (
         <button
           onClick={() => navigate(null, null)}

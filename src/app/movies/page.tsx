@@ -1,9 +1,11 @@
 import { Suspense } from 'react';
 import { discoverMovies, searchMovies } from '@/lib/tmdb';
+import { MOVIE_GENRES } from '@/lib/genreData';
+import { PROVIDERS } from '@/components/NetworkFilters';
 import SearchForm from '@/components/SearchForm';
 import MediaCard from '@/components/MediaCard';
-import NetworkFilters, { PROVIDERS } from '@/components/NetworkFilters';
-import GenreFilters, { MOVIE_GENRES } from '@/components/GenreFilters';
+import NetworkFilters from '@/components/NetworkFilters';
+import GenreFilters from '@/components/GenreFilters';
 import Pagination from '@/components/Pagination';
 
 export const dynamic = 'force-dynamic';
