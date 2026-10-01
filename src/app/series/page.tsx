@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { discoverTV, searchTV } from '@/lib/tmdb';
 import SearchForm from '@/components/SearchForm';
 import MediaCard from '@/components/MediaCard';
@@ -79,13 +80,15 @@ export default async function SeriesPage({ searchParams }: { searchParams: Promi
 
         {/* Genre & Year filters */}
         {!query && (
-          <GenreFilters
-            genres={TV_GENRES}
-            activeGenre={genreId ?? null}
-            activeYear={year ?? null}
-            baseUrl="/series"
-            currentProvider={providerId}
-          />
+          <Suspense fallback={null}>
+            <GenreFilters
+              genres={TV_GENRES}
+              activeGenre={genreId ?? null}
+              activeYear={year ?? null}
+              baseUrl="/series"
+              currentProvider={providerId}
+            />
+          </Suspense>
         )}
 
         {/* Grid */}

@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { discoverMovies, searchMovies } from '@/lib/tmdb';
 import SearchForm from '@/components/SearchForm';
 import MediaCard from '@/components/MediaCard';
@@ -79,13 +80,15 @@ export default async function MoviesPage({ searchParams }: { searchParams: Promi
 
         {/* Genre & Year filters */}
         {!query && (
-          <GenreFilters
-            genres={MOVIE_GENRES}
-            activeGenre={genreId ?? null}
-            activeYear={year ?? null}
-            baseUrl="/movies"
-            currentProvider={providerId}
-          />
+          <Suspense fallback={null}>
+            <GenreFilters
+              genres={MOVIE_GENRES}
+              activeGenre={genreId ?? null}
+              activeYear={year ?? null}
+              baseUrl="/movies"
+              currentProvider={providerId}
+            />
+          </Suspense>
         )}
 
         {/* Grid */}

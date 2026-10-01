@@ -1,4 +1,7 @@
-import Link from 'next/link';
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export const MOVIE_GENRES = [
   { id: 28,    name: 'أكشن' },
@@ -41,6 +44,87 @@ interface GenreFiltersProps {
   currentProvider?: number | null;
 }
 
+function Dropdown({
+  label,
+  items,
+  activeId,
+  onSelect,
+}: {
+  label: string;
+  items: { id: number; name: string }[];
+  activeId: number | null | undefined;
+  onSelect: (id: number | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const activeItem = items.find(i => i.id === activeId);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors border ${
+          activeId
+            ? 'bg-neutral-100 text-neutral-900 border-neutral-100'
+            : 'border-neutral-700 text-neutral-300 hover:border-neutral-500 hover:text-white'
+        }`}
+      >
+        {activeItem ? activeItem.name : label}
+        <svg
+          className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute top-full mt-1.5 right-0 z-50 w-44 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl shadow-black/60 overflow-hidden">
+          {/* Reset option */}
+          <button
+            onClick={() => { onSelect(null); setOpen(false); }}
+            className={`w-full text-right px-4 py-2.5 text-sm transition-colors ${
+              !activeId
+                ? 'bg-neutral-700 text-white font-semibold'
+                : 'text-neutral-400 hover:bg-neutral-800 hover:text-white'
+            }`}
+          >
+            الكل
+          </button>
+          <div className="h-px bg-neutral-800" />
+          <div className="max-h-60 overflow-y-auto scrollbar-hide">
+            {items.map(item => (
+              <button
+                key={item.id}
+                onClick={() => { onSelect(item.id === activeId ? null : item.id); setOpen(false); }}
+                className={`w-full text-right px-4 py-2.5 text-sm transition-colors ${
+                  item.id === activeId
+                    ? 'bg-neutral-700 text-white font-semibold'
+                    : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                }`}
+              >
+                {item.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function GenreFilters({
   genres,
   activeGenre,
@@ -48,75 +132,47 @@ export default function GenreFilters({
   baseUrl,
   currentProvider,
 }: GenreFiltersProps) {
-  const buildUrl = (params: { genre?: number | null; year?: number | null }) => {
-    const url = new URLSearchParams();
-    if (currentProvider) url.set('provider', currentProvider.toString());
-    if (params.genre) url.set('genre', params.genre.toString());
-    if (params.year) url.set('year', params.year.toString());
-    const qs = url.toString();
-    return qs ? `${baseUrl}?${qs}` : baseUrl;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const navigate = (newGenre: number | null, newYear: number | null) => {
+    const params = new URLSearchParams();
+    if (currentProvider) params.set('provider', currentProvider.toString());
+    if (newGenre)         params.set('genre', newGenre.toString());
+    if (newYear)          params.set('year', newYear.toString());
+    const qs = params.toString();
+    router.push(qs ? `${baseUrl}?${qs}` : baseUrl);
   };
 
+  const yearItems = YEARS.map(y => ({ id: y, name: String(y) }));
+
   return (
-    <div className="space-y-2.5 mb-6">
+    <div className="flex items-center gap-2 mb-5 flex-wrap">
+      <Dropdown
+        label="التصنيف"
+        items={genres}
+        activeId={activeGenre}
+        onSelect={(id) => navigate(id, activeYear ?? null)}
+      />
+      <Dropdown
+        label="السنة"
+        items={yearItems}
+        activeId={activeYear}
+        onSelect={(id) => navigate(activeGenre ?? null, id)}
+      />
 
-      {/* ── Genre row ──────────────────────────────── */}
-      <div className="flex flex-wrap gap-1.5 sm:gap-2">
-        {/* "الكل" chip */}
-        <Link
-          href={buildUrl({ year: activeYear })}
-          className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
-            !activeGenre
-              ? 'bg-neutral-100 text-neutral-900'
-              : 'text-neutral-500 hover:text-neutral-200 hover:bg-white/5'
-          }`}
+      {/* Clear all button — only show when something is active */}
+      {(activeGenre || activeYear) && (
+        <button
+          onClick={() => navigate(null, null)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-neutral-500 hover:text-white transition-colors"
         >
-          الكل
-        </Link>
-
-        {genres.map((g) => (
-          <Link
-            key={g.id}
-            href={buildUrl({ genre: activeGenre === g.id ? null : g.id, year: activeYear })}
-            className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
-              activeGenre === g.id
-                ? 'bg-neutral-100 text-neutral-900'
-                : 'text-neutral-500 hover:text-neutral-200 hover:bg-white/5'
-            }`}
-          >
-            {g.name}
-          </Link>
-        ))}
-      </div>
-
-      {/* ── Year row ───────────────────────────────── */}
-      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        <Link
-          href={buildUrl({ genre: activeGenre })}
-          className={`shrink-0 px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
-            !activeYear
-              ? 'bg-neutral-100 text-neutral-900'
-              : 'text-neutral-500 hover:text-neutral-200 hover:bg-white/5'
-          }`}
-        >
-          كل السنوات
-        </Link>
-
-        {YEARS.map((y) => (
-          <Link
-            key={y}
-            href={buildUrl({ genre: activeGenre, year: activeYear === y ? null : y })}
-            className={`shrink-0 px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
-              activeYear === y
-                ? 'bg-neutral-100 text-neutral-900'
-                : 'text-neutral-500 hover:text-neutral-200 hover:bg-white/5'
-            }`}
-          >
-            {y}
-          </Link>
-        ))}
-      </div>
-
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          مسح الفلاتر
+        </button>
+      )}
     </div>
   );
 }
