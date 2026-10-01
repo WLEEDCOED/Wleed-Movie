@@ -10,17 +10,17 @@ export interface StreamServer {
 export function generateTVServers(tmdbId: number, season: number, episode: number): StreamServer[] {
   return [
     {
-      id: 'vidstuck',
-      name: 'VidStuck',
-      embedUrl: `https://vidstuck.xyz/embed/tv/${tmdbId}/${season}/${episode}`,
+      id: 'cinesrc',
+      name: 'CineSrc',
+      embedUrl: `https://cinesrc.st/embed/tv/${tmdbId}?s=${season}&e=${episode}`,
       quality: '1080p',
       isTrusted: true,
       language: 'مترجم',
     },
     {
-      id: 'cinesrc',
-      name: 'CineSrc',
-      embedUrl: `https://cinesrc.st/embed/tv/${tmdbId}?s=${season}&e=${episode}`,
+      id: 'vidstuck',
+      name: 'VidStuck',
+      embedUrl: `https://vidstuck.xyz/embed/tv/${tmdbId}/${season}/${episode}`,
       quality: '1080p',
       isTrusted: false,
       language: 'مترجم',
@@ -47,17 +47,17 @@ export function generateTVServers(tmdbId: number, season: number, episode: numbe
 export function generateMovieServers(tmdbId: number): StreamServer[] {
   return [
     {
-      id: 'vidstuck',
-      name: 'VidStuck',
-      embedUrl: `https://vidstuck.xyz/embed/movie/${tmdbId}`,
+      id: 'cinesrc',
+      name: 'CineSrc',
+      embedUrl: `https://cinesrc.st/embed/movie/${tmdbId}`,
       quality: '1080p',
       isTrusted: true,
       language: 'مترجم',
     },
     {
-      id: 'cinesrc',
-      name: 'CineSrc',
-      embedUrl: `https://cinesrc.st/embed/movie/${tmdbId}`,
+      id: 'vidstuck',
+      name: 'VidStuck',
+      embedUrl: `https://vidstuck.xyz/embed/movie/${tmdbId}`,
       quality: '1080p',
       isTrusted: false,
       language: 'مترجم',
