@@ -173,3 +173,79 @@ export async function getTVByProvider(providerId: number): Promise<TMDBTrending[
   });
   return data.results.map(r => ({ ...r, media_type: 'tv' }));
 }
+
+export interface DiscoverParams {
+  page?: number;
+  genre?: number;
+  year?: number;
+  provider?: number;
+}
+
+export interface DiscoverResult {
+  results: TMDBTrending[];
+  totalPages: number;
+  totalResults: number;
+  page: number;
+}
+
+export async function discoverMovies(params: DiscoverParams = {}): Promise<DiscoverResult> {
+  const queryParams: Record<string, string> = {
+    sort_by: 'popularity.desc',
+    page: (params.page || 1).toString(),
+    watch_region: 'US',
+  };
+  if (params.genre) queryParams.with_genres = params.genre.toString();
+  if (params.year) queryParams.primary_release_year = params.year.toString();
+  if (params.provider) {
+    queryParams.with_watch_providers = params.provider.toString();
+  }
+
+  const data = await tmdbFetch<{ results: TMDBTrending[]; total_pages: number; total_results: number; page: number }>('/discover/movie', queryParams);
+  return {
+    results: data.results.map(r => ({ ...r, media_type: 'movie' })),
+    totalPages: Math.min(data.total_pages, 500),
+    totalResults: data.total_results,
+    page: data.page,
+  };
+}
+
+export async function discoverTV(params: DiscoverParams = {}): Promise<DiscoverResult> {
+  const queryParams: Record<string, string> = {
+    sort_by: 'popularity.desc',
+    page: (params.page || 1).toString(),
+    watch_region: 'US',
+  };
+  if (params.genre) queryParams.with_genres = params.genre.toString();
+  if (params.year) queryParams.first_air_date_year = params.year.toString();
+  if (params.provider) {
+    queryParams.with_watch_providers = params.provider.toString();
+  }
+
+  const data = await tmdbFetch<{ results: TMDBTrending[]; total_pages: number; total_results: number; page: number }>('/discover/tv', queryParams);
+  return {
+    results: data.results.map(r => ({ ...r, media_type: 'tv' })),
+    totalPages: Math.min(data.total_pages, 500),
+    totalResults: data.total_results,
+    page: data.page,
+  };
+}
+
+export async function searchMovies(query: string, page = 1): Promise<DiscoverResult> {
+  const data = await tmdbFetch<{ results: TMDBTrending[]; total_pages: number; total_results: number; page: number }>('/search/movie', { query, page: page.toString() });
+  return {
+    results: data.results.map(r => ({ ...r, media_type: 'movie' })),
+    totalPages: Math.min(data.total_pages, 500),
+    totalResults: data.total_results,
+    page: data.page,
+  };
+}
+
+export async function searchTV(query: string, page = 1): Promise<DiscoverResult> {
+  const data = await tmdbFetch<{ results: TMDBTrending[]; total_pages: number; total_results: number; page: number }>('/search/tv', { query, page: page.toString() });
+  return {
+    results: data.results.map(r => ({ ...r, media_type: 'tv' })),
+    totalPages: Math.min(data.total_pages, 500),
+    totalResults: data.total_results,
+    page: data.page,
+  };
+}

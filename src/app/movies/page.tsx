@@ -1,59 +1,118 @@
-import { getTrendingMovies, searchMulti, getMoviesByProvider } from '@/lib/tmdb';
-import type { TMDBTrending } from '@/lib/tmdb';
+import { discoverMovies, searchMovies } from '@/lib/tmdb';
 import SearchForm from '@/components/SearchForm';
 import MediaCard from '@/components/MediaCard';
 import NetworkFilters, { PROVIDERS } from '@/components/NetworkFilters';
+import GenreFilters, { MOVIE_GENRES } from '@/components/GenreFilters';
+import Pagination from '@/components/Pagination';
 
 export const dynamic = 'force-dynamic';
 
-export default async function MoviesPage({ searchParams }: { searchParams: Promise<{ q?: string; provider?: string }> }) {
-  let movies: TMDBTrending[] = [];
-  const resolvedSearchParams = await searchParams;
-  const query = resolvedSearchParams.q || '';
-  const providerId = resolvedSearchParams.provider ? parseInt(resolvedSearchParams.provider) : null;
+interface SearchParams {
+  q?: string;
+  provider?: string;
+  genre?: string;
+  year?: string;
+  page?: string;
+}
+
+export default async function MoviesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const sp = await searchParams;
+  const query = sp.q || '';
+  const providerId = sp.provider ? parseInt(sp.provider) : undefined;
+  const genreId = sp.genre ? parseInt(sp.genre) : undefined;
+  const year = sp.year ? parseInt(sp.year) : undefined;
+  const page = sp.page ? parseInt(sp.page) : 1;
+
+  let result = { results: [] as any[], totalPages: 1, totalResults: 0, page: 1 };
 
   try {
     if (query) {
-      const results = await searchMulti(query);
-      movies = results.filter((item) => item.media_type === 'movie');
-    } else if (providerId) {
-      movies = await getMoviesByProvider(providerId);
+      result = await searchMovies(query, page);
     } else {
-      movies = await getTrendingMovies();
+      result = await discoverMovies({ page, genre: genreId, year, provider: providerId });
     }
   } catch (error) {
     console.error('Failed to fetch from TMDB:', error);
   }
 
   const activeProvider = PROVIDERS.find(n => n.id === providerId);
+  const activeGenre = MOVIE_GENRES.find(g => g.id === genreId);
+
+  const spRecord: Record<string, string | undefined> = {
+    q: sp.q,
+    provider: sp.provider,
+    genre: sp.genre,
+    year: sp.year,
+  };
+
+  let pageTitle = 'الأفلام';
+  if (query) pageTitle = `نتائج: ${query}`;
+  else if (activeProvider && activeGenre) pageTitle = `${activeGenre.name} • ${activeProvider.short}`;
+  else if (activeProvider) pageTitle = `أفلام ${activeProvider.short}`;
+  else if (activeGenre) pageTitle = `${activeGenre.emoji} ${activeGenre.name}`;
+  else if (year) pageTitle = `أفلام ${year}`;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-        <h1 className="text-3xl md:text-4xl font-black flex items-center gap-3">
-          <span className="w-2 h-10 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full" />
-          {query ? `نتائج البحث عن: ${query}` : activeProvider ? `أفلام ${activeProvider.short}` : 'الأفلام'}
-        </h1>
-        <div className="w-full md:w-96">
-          <SearchForm />
+    <div className="min-h-screen pt-6 pb-16">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white flex items-center gap-2">
+              <span className="w-1 sm:w-1.5 h-6 sm:h-8 bg-gradient-to-b from-violet-500 to-cyan-500 rounded-full" />
+              {pageTitle}
+            </h1>
+            {result.totalResults > 0 && (
+              <p className="text-xs text-zinc-400 mt-1 mr-3">
+                {result.totalResults.toLocaleString('ar-SA')} نتيجة — صفحة {result.page} من {result.totalPages}
+              </p>
+            )}
+          </div>
+          <div className="w-full sm:w-80">
+            <SearchForm />
+          </div>
         </div>
+
+        {/* Provider filter */}
+        {!query && <NetworkFilters activeProviderId={providerId ?? null} baseUrl="/movies" />}
+
+        {/* Genre & Year filters */}
+        {!query && (
+          <GenreFilters
+            genres={MOVIE_GENRES}
+            activeGenre={genreId ?? null}
+            activeYear={year ?? null}
+            baseUrl="/movies"
+            currentProvider={providerId}
+            currentPage={page}
+          />
+        )}
+
+        {/* Grid */}
+        {result.results.length === 0 ? (
+          <div className="text-center py-24">
+            <div className="text-5xl mb-4">🎬</div>
+            <p className="text-zinc-500 text-lg">
+              {query ? `لم يتم العثور على أفلام لـ "${query}"` : 'لا توجد أفلام بهذه الفلاتر.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
+              {result.results.map((item, index) => (
+                <MediaCard key={item.id} item={item} index={index} />
+              ))}
+            </div>
+
+            <Pagination
+              currentPage={result.page}
+              totalPages={result.totalPages}
+              baseUrl="/movies"
+              searchParams={spRecord}
+            />
+          </>
+        )}
       </div>
-
-      {!query && <NetworkFilters activeProviderId={providerId} baseUrl="/movies" />}
-
-      {movies.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-neutral-500 text-lg">
-            {query ? `لم يتم العثور على أفلام لـ "${query}"` : 'تعذر تحميل الأفلام.'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-5">
-          {movies.map((item, index) => (
-            <MediaCard key={item.id} item={item} index={index} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
