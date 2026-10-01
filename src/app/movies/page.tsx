@@ -55,20 +55,21 @@ export default async function MoviesPage({ searchParams }: { searchParams: Promi
   return (
     <div className="min-h-screen pt-6 pb-16">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center justify-between gap-3 mb-5">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white flex items-center gap-2">
-              <span className="w-1 sm:w-1.5 h-6 sm:h-8 bg-gradient-to-b from-violet-500 to-cyan-500 rounded-full" />
+            <h1 className="text-xl sm:text-3xl font-black text-white flex items-center gap-2">
+              <span className="w-1 h-5 sm:h-7 bg-red-600 rounded-full" />
               {pageTitle}
             </h1>
             {result.totalResults > 0 && (
-              <p className="text-xs text-zinc-400 mt-1 mr-3">
-                {result.totalResults.toLocaleString('ar-SA')} نتيجة — صفحة {result.page} من {result.totalPages}
+              <p className="text-[11px] sm:text-xs text-neutral-500 mt-0.5 mr-3">
+                {result.totalResults.toLocaleString('ar-SA')} نتيجة · ص {result.page}/{result.totalPages}
               </p>
             )}
           </div>
-          <div className="w-full sm:w-80">
+          <div className="w-48 sm:w-72">
             <SearchForm />
           </div>
         </div>
@@ -84,15 +85,13 @@ export default async function MoviesPage({ searchParams }: { searchParams: Promi
             activeYear={year ?? null}
             baseUrl="/movies"
             currentProvider={providerId}
-            currentPage={page}
           />
         )}
 
         {/* Grid */}
         {result.results.length === 0 ? (
           <div className="text-center py-24">
-            <div className="text-5xl mb-4">🎬</div>
-            <p className="text-zinc-500 text-lg">
+            <p className="text-neutral-500 text-lg">
               {query ? `لم يتم العثور على أفلام لـ "${query}"` : 'لا توجد أفلام بهذه الفلاتر.'}
             </p>
           </div>
