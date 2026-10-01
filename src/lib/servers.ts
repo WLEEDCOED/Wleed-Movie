@@ -18,14 +18,6 @@ export function generateTVServers(tmdbId: number, season: number, episode: numbe
       language: 'مترجم',
     },
     {
-      id: 'vidzee',
-      name: 'VidZee',
-      embedUrl: `https://player.vidzee.wtf/embed/tv/${tmdbId}/${season}/${episode}`,
-      quality: '1080p',
-      isTrusted: false,
-      language: 'مترجم',
-    },
-    {
       id: 'vidlink',
       name: 'VidLink',
       embedUrl: `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}?primaryColor=dc2626&secondaryColor=991b1b`,
@@ -52,14 +44,6 @@ export function generateMovieServers(tmdbId: number): StreamServer[] {
       embedUrl: `https://vidstuck.xyz/embed/movie/${tmdbId}`,
       quality: '1080p',
       isTrusted: true,
-      language: 'مترجم',
-    },
-    {
-      id: 'vidzee',
-      name: 'VidZee',
-      embedUrl: `https://player.vidzee.wtf/embed/movie/${tmdbId}`,
-      quality: '1080p',
-      isTrusted: false,
       language: 'مترجم',
     },
     {
