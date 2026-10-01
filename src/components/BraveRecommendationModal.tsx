@@ -2,71 +2,86 @@
 
 import { useState, useEffect } from 'react';
 
-const STORAGE_KEY = 'wleed_hide_brave_notice';
-const SESSION_KEY = 'wleed_session_dismiss_brave';
-
 export default function BraveRecommendationModal() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [dontShowAgain, setDontShowAgain] = useState(false); // طافي (غير مفعل) افتراضياً كما طلب المستخدم
+  const [isLocked, setIsLocked] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+  const [showWarning, setShowWarning] = useState(false);
+  const [shake, setShake] = useState(false);
 
   useEffect(() => {
-    // 1. تحقق إذا كان المستخدم اختار سابقاً عدم إظهار الرسالة
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === 'true') return;
-      if (sessionStorage.getItem(SESSION_KEY) === 'true') return;
-    } catch {
-      // تجاهل أخطاء التخزين الخاص
-    }
-
-    // 2. تحقق إذا كان المستخدم يتصفح أصلاً من متصفح Brave
-    const checkBraveAndShow = async () => {
+    const checkBrowser = async () => {
       try {
-        const nav = navigator as unknown as { brave?: { isBrave?: () => Promise<boolean> } };
+        // 1. فحص Brave على أجهزة الكمبيوتر والأندرويد (Official API)
+        const nav = navigator as unknown as { 
+          brave?: { isBrave?: () => Promise<boolean> };
+          userAgent?: string;
+        };
+
+        let isBrave = false;
+
         if (typeof nav.brave?.isBrave === 'function') {
-          const isBrave = await nav.brave.isBrave();
-          if (isBrave) return; // مستخدم Brave لا يحتاج الرسالة
+          isBrave = await nav.brave.isBrave();
+        }
+
+        // 2. فحص Brave على الآيفون والآيباد (iOS User Agent)
+        if (!isBrave && nav.userAgent && /Brave/i.test(nav.userAgent)) {
+          isBrave = true;
+        }
+
+        // إذا كان يستخدم Brave، نفتح الموقع فوراً
+        if (isBrave) {
+          setIsLocked(false);
+        } else {
+          // ليس Brave: نقفل الصفحة تماماً
+          setIsLocked(true);
         }
       } catch {
-        // تجاهل أي خطأ فحص
+        setIsLocked(true);
+      } finally {
+        setIsChecking(false);
       }
-
-      // إظهار الرسالة بعد نصف ثانية من تحميل الصفحة
-      const timer = setTimeout(() => {
-        setIsOpen(true);
-      }, 500);
-
-      return () => clearTimeout(timer);
     };
 
-    checkBraveAndShow();
+    checkBrowser();
   }, []);
 
-  const handleClose = () => {
-    try {
-      if (dontShowAgain) {
-        localStorage.setItem(STORAGE_KEY, 'true'); // لن تظهر مجدداً أبداً
-      } else {
-        sessionStorage.setItem(SESSION_KEY, 'true'); // لن تتكرر في نفس الجلسة
-      }
-    } catch {
-      // تجاهل الخطأ
+  // قفل التمرير في الصفحة طالما المشاهد ليس في Brave
+  useEffect(() => {
+    if (isLocked) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     }
-    setIsOpen(false);
+  }, [isLocked]);
+
+  // محاولة الإغلاق: يتم رفض الإغلاق وإظهار رسالة "لمصلحتك حمل بريف"
+  const handleAttemptClose = () => {
+    setShowWarning(true);
+    setShake(true);
+    setTimeout(() => setShake(false), 500);
   };
 
-  if (!isOpen) return null;
+  // أثناء الفحص الأولي لا نعرض شيئاً لتفادي الوميض
+  if (isChecking || !isLocked) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+    <div 
+      className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl select-none"
+      onClick={handleAttemptClose}
+    >
       <div 
-        className="relative w-full max-w-md bg-neutral-950 border border-neutral-800 rounded-2xl p-6 shadow-2xl shadow-red-950/20 text-center animate-slide-up"
+        className={`relative w-full max-w-md bg-neutral-950 border-2 border-orange-500/40 rounded-3xl p-7 shadow-2xl shadow-orange-500/20 text-center transition-transform ${
+          shake ? 'animate-bounce' : ''
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* زر الإغلاق */}
+        {/* زر الإغلاق الوهمي (إذا ضغطه تطلع له الرسالة ولا يقفل) */}
         <button
-          onClick={handleClose}
-          className="absolute top-4 left-4 p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors"
-          aria-label="إغلاق"
+          onClick={handleAttemptClose}
+          className="absolute top-4 left-4 p-2 rounded-xl text-neutral-500 hover:text-white hover:bg-neutral-900 transition-colors"
+          title="إغلاق"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -74,51 +89,51 @@ export default function BraveRecommendationModal() {
         </button>
 
         {/* الأيقونة */}
-        <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-orange-500/20 to-red-600/20 border border-orange-500/30 flex items-center justify-center text-3xl shadow-lg shadow-orange-500/10">
+        <div className="w-20 h-20 mx-auto mb-5 rounded-3xl bg-gradient-to-br from-orange-500/20 to-red-600/30 border border-orange-500/40 flex items-center justify-center text-4xl shadow-xl shadow-orange-600/20 animate-pulse">
           🦁
         </div>
 
-        {/* العنوان */}
-        <h3 className="text-xl font-black text-white mb-2">
-          نصيحة لمشاهدة بدون إعلانات 🛡️
-        </h3>
+        {/* العنوان الإجباري */}
+        <h2 className="text-2xl font-black text-white mb-2 tracking-wide">
+          تنبيه أمان: الدخول عبر متصفح Brave فقط 🛡️
+        </h2>
 
-        {/* الوصف */}
-        <p className="text-sm text-neutral-300 leading-relaxed mb-5">
-          للحصول على أفضل تجربة وتجنب النوافذ المنبثقة والإعلانات المزعجة نهائياً على الجوال أو الكمبيوتر، ننصحك بفتح الموقع عبر متصفح{' '}
-          <span className="font-bold text-orange-400">Brave</span> المجاني.
+        {/* تنبيه تحذيري عند محاولة الإغلاق */}
+        {showWarning && (
+          <div className="mb-4 py-2 px-3 rounded-xl bg-red-600/20 border border-red-500/40 text-red-400 font-bold text-sm animate-fade-in">
+            ⚠️ لمصلحتك حمل بريف! الموقع محمي ومقفل ولن يفتح إلا من داخله.
+          </div>
+        )}
+
+        {/* نص الإجبار */}
+        <p className="text-sm text-neutral-300 leading-relaxed mb-6 font-medium">
+          لحماية جهازك من الإعلانات المزعجة والنوافذ المنبثقة، تم إقفال الموقع؛{' '}
+          <span className="text-orange-400 font-bold">لن يشتغل الموقع ولا مشغل الأفلام</span> إلا بعد فتح الرابط من داخل تطبيق متصفح{' '}
+          <span className="text-white font-extrabold underline underline-offset-4 decoration-orange-500">Brave</span> المجاني.
         </p>
 
-        {/* خيار عدم الإظهار مرة أخرى (طافي افتراضياً) */}
-        <label className="flex items-center justify-center gap-2 cursor-pointer select-none text-xs text-neutral-400 hover:text-neutral-200 transition-colors mb-5">
-          <input
-            type="checkbox"
-            checked={dontShowAgain}
-            onChange={(e) => setDontShowAgain(e.target.checked)}
-            className="w-4 h-4 rounded border-neutral-700 bg-neutral-900 text-red-600 focus:ring-red-500 focus:ring-offset-0 cursor-pointer accent-red-600"
-          />
-          <span>عدم إظهار هذه الرسالة مرة أخرى</span>
-        </label>
-
-        {/* الأزرار */}
-        <div className="flex flex-col sm:flex-row gap-2.5">
+        {/* الأزرار الإجبارية */}
+        <div className="flex flex-col gap-3">
           <a
             href="https://brave.com/download/"
             target="_blank"
             rel="noopener noreferrer"
-            onClick={handleClose}
-            className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold text-sm transition-all shadow-lg shadow-orange-600/25 flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-orange-600 via-orange-500 to-red-600 hover:brightness-110 text-white font-black text-base transition-all shadow-lg shadow-orange-600/30 flex items-center justify-center gap-2.5 active:scale-95"
           >
-            <span>تحميل متصفح Brave</span>
-            <svg className="w-4 h-4 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            <span>تحميل متصفح Brave الآن</span>
+            <svg className="w-5 h-5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
           </a>
+
           <button
-            onClick={handleClose}
-            className="py-2.5 px-5 rounded-xl border border-neutral-700 hover:border-neutral-500 text-neutral-300 hover:text-white font-semibold text-sm transition-all bg-neutral-900/60"
+            onClick={() => window.location.reload()}
+            className="w-full py-3 px-5 rounded-2xl border border-neutral-800 hover:border-neutral-600 bg-neutral-900/80 text-neutral-300 hover:text-white font-bold text-sm transition-all flex items-center justify-center gap-2"
           >
-            فهمت، شكراً
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>فتحت الرابط من Brave؟ اضغط للتحديث</span>
           </button>
         </div>
       </div>
