@@ -95,7 +95,7 @@ export default function BraveRecommendationModal() {
 
         {/* العنوان الإجباري */}
         <h2 className="text-2xl font-black text-white mb-2 tracking-wide">
-          تنبيه أمان: الدخول عبر متصفح Brave فقط 🛡️
+          الدخول عبر متصفح Brave فقط 🦁
         </h2>
 
         {/* تنبيه تحذيري عند محاولة الإغلاق */}
@@ -107,7 +107,7 @@ export default function BraveRecommendationModal() {
 
         {/* نص الإجبار */}
         <p className="text-sm text-neutral-300 leading-relaxed mb-6 font-medium">
-          لحماية جهازك من الإعلانات المزعجة والنوافذ المنبثقة، تم إقفال الموقع؛{' '}
+          لمشاهدة بدون إعلانات مزعجة ونوافذ منبثقة، تم إقفال الموقع؛{' '}
           <span className="text-orange-400 font-bold">لن يشتغل الموقع ولا مشغل الأفلام</span> إلا بعد فتح الرابط من داخل تطبيق متصفح{' '}
           <span className="text-white font-extrabold underline underline-offset-4 decoration-orange-500">Brave</span> المجاني.
         </p>
