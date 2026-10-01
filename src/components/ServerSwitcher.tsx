@@ -197,6 +197,27 @@ export default function ServerSwitcher({
           )}
         </div>
       )}
+
+      {/* خوادم المشاهدة */}
+      {servers.length > 1 && (
+        <div className="flex items-center gap-2 flex-wrap pt-1">
+          <span className="text-xs text-neutral-400 font-medium ml-2">السيرفر:</span>
+          {servers.map((server) => (
+            <button
+              key={server.id}
+              onClick={() => setActiveServer(server)}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all ${
+                activeServer?.id === server.id
+                  ? 'bg-red-600 text-white shadow-lg shadow-red-900/30 ring-1 ring-red-400'
+                  : 'bg-neutral-900/80 text-neutral-300 hover:text-white hover:bg-neutral-800 border border-neutral-800'
+              }`}
+            >
+              {server.isTrusted && <span>✨</span>}
+              <span>{server.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
