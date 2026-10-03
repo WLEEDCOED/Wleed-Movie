@@ -31,7 +31,7 @@ export function generateTVServers(tmdbId: number, season: number, episode: numbe
     {
       id: 'vidstuck',
       name: 'VidStuck',
-      embedUrl: `https://vidstuck.xyz/embed/tv/${tmdbId}/${season}/${episode}`,
+      embedUrl: `https://vidstuck.xyz/embed/tv/${tmdbId}/${season}/${episode}?subtitle=arabic`,
       quality: '1080p',
       isTrusted: true,
       language: 'مترجم',
@@ -63,7 +63,7 @@ export function generateMovieServers(tmdbId: number, origin = DEFAULT_ORIGIN): S
     {
       id: 'vidstuck',
       name: 'VidStuck',
-      embedUrl: `https://vidstuck.xyz/embed/movie/${tmdbId}`,
+      embedUrl: `https://vidstuck.xyz/embed/movie/${tmdbId}?subtitle=arabic`,
       quality: '1080p',
       isTrusted: true,
       language: 'مترجم',
