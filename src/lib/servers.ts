@@ -10,33 +10,49 @@ export interface StreamServer {
 const DEFAULT_ORIGIN = process.env.NEXT_PUBLIC_APP_URL || 'https://cinema-three-wheat.vercel.app';
 
 export function getSubtitleVttUrl(tmdbId: number, type: 'movie' | 'tv' = 'movie', season?: number, episode?: number, origin = DEFAULT_ORIGIN): string {
-  let url = `${origin}/api/subtitles/vtt?tmdbId=${tmdbId}&type=${type}`;
   if (type === 'tv' && season && episode) {
-    url += `&season=${season}&episode=${episode}`;
+    return `${origin}/api/subtitles/file/tv-${tmdbId}-${season}-${episode}.vtt`;
   }
-  return url;
+  return `${origin}/api/subtitles/file/movie-${tmdbId}.vtt`;
 }
 
 export function getSubtitleDownloadUrl(tmdbId: number, type: 'movie' | 'tv' = 'movie', season?: number, episode?: number): string {
-  let url = `/api/subtitles/vtt?tmdbId=${tmdbId}&type=${type}&download=true&format=srt`;
   if (type === 'tv' && season && episode) {
-    url += `&season=${season}&episode=${episode}`;
+    return `/api/subtitles/vtt?tmdbId=${tmdbId}&type=tv&season=${season}&episode=${episode}&download=true&format=srt`;
   }
-  return url;
+  return `/api/subtitles/vtt?tmdbId=${tmdbId}&type=movie&download=true&format=srt`;
 }
 
 export function generateTVServers(tmdbId: number, season: number, episode: number, origin = DEFAULT_ORIGIN): StreamServer[] {
   const subTvUrl = getSubtitleVttUrl(tmdbId, 'tv', season, episode, origin);
   const vidlinkTvUrl = `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}?primaryColor=dc2626&secondaryColor=991b1b&subtitles=${encodeURIComponent(subTvUrl)}&subtitleLabel=${encodeURIComponent('العربية')}`;
+  const vidfastTvUrl = `https://vidfast.pro/tv/${tmdbId}/${season}/${episode}?sub=ar`;
+  const superembedTvUrl = `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${season}&e=${episode}&sub_url=${encodeURIComponent(subTvUrl)}&sub_label=${encodeURIComponent('العربية')}`;
 
   return [
     {
+      id: 'vidfast',
+      name: 'VidFast (ترجمة ?sub=ar)',
+      embedUrl: vidfastTvUrl,
+      quality: '1080p',
+      isTrusted: true,
+      language: 'مترجم عربي تلقائي',
+    },
+    {
       id: 'vidlink',
-      name: 'VidLink (مترجم تلقائياً)',
+      name: 'VidLink (ترجمة SubDL)',
       embedUrl: vidlinkTvUrl,
       quality: '1080p',
       isTrusted: true,
       language: 'مترجم عربي تلقائي',
+    },
+    {
+      id: 'superembed',
+      name: 'SuperEmbed (ترجمة تلقائية)',
+      embedUrl: superembedTvUrl,
+      quality: '1080p',
+      isTrusted: true,
+      language: 'مترجم عربي',
     },
     {
       id: 'cinesrc',
@@ -60,15 +76,33 @@ export function generateTVServers(tmdbId: number, season: number, episode: numbe
 export function generateMovieServers(tmdbId: number, origin = DEFAULT_ORIGIN): StreamServer[] {
   const subMovieUrl = getSubtitleVttUrl(tmdbId, 'movie', undefined, undefined, origin);
   const vidlinkMovieUrl = `https://vidlink.pro/movie/${tmdbId}?primaryColor=dc2626&secondaryColor=991b1b&subtitles=${encodeURIComponent(subMovieUrl)}&subtitleLabel=${encodeURIComponent('العربية')}`;
+  const vidfastMovieUrl = `https://vidfast.pro/movie/${tmdbId}?sub=ar`;
+  const superembedMovieUrl = `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&sub_url=${encodeURIComponent(subMovieUrl)}&sub_label=${encodeURIComponent('العربية')}`;
 
   return [
     {
+      id: 'vidfast',
+      name: 'VidFast (ترجمة ?sub=ar)',
+      embedUrl: vidfastMovieUrl,
+      quality: '1080p',
+      isTrusted: true,
+      language: 'مترجم عربي تلقائي',
+    },
+    {
       id: 'vidlink',
-      name: 'VidLink (مترجم تلقائياً)',
+      name: 'VidLink (ترجمة SubDL)',
       embedUrl: vidlinkMovieUrl,
       quality: '1080p',
       isTrusted: true,
       language: 'مترجم عربي تلقائي',
+    },
+    {
+      id: 'superembed',
+      name: 'SuperEmbed (ترجمة تلقائية)',
+      embedUrl: superembedMovieUrl,
+      quality: '1080p',
+      isTrusted: true,
+      language: 'مترجم عربي',
     },
     {
       id: 'cinesrc',

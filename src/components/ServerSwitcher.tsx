@@ -56,8 +56,19 @@ export default function ServerSwitcher({
   const [cues, setCues] = useState<SubtitleCue[]>([]);
   const [currentText, setCurrentText] = useState('');
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [subAvailable, setSubAvailable] = useState<boolean | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    if (!tmdbId) return;
+    setSubAvailable(null);
+    const checkUrl = `/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType || 'movie'}${season ? `&season=${season}&episode=${episode}` : ''}&check=true`;
+    fetch(checkUrl)
+      .then((res) => res.json())
+      .then((data) => setSubAvailable(!!data.hasSub))
+      .catch(() => setSubAvailable(false));
+  }, [tmdbId, mediaType, season, episode]);
 
   const parseVTT = useCallback((vttText: string): SubtitleCue[] => {
     const parsed: SubtitleCue[] = [];
@@ -230,34 +241,55 @@ export default function ServerSwitcher({
       {tmdbId && (
         <div className="glass rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs border border-neutral-800/80">
           <div className="flex items-center gap-2 flex-wrap">
-            {activeServer?.id === 'vidlink' ? (
-              <span className="flex items-center gap-1.5 text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                الترجمة العربية مدمجة تلقائياً عبر SubDL
+            {subAvailable === null ? (
+              <span className="text-neutral-500 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-neutral-600 animate-pulse" />
+                جاري التحقق من توفر الترجمة العربية...
               </span>
-            ) : activeServer?.id === 'cinesrc' ? (
-              <span className="flex items-center gap-1.5 text-blue-400 font-medium bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-lg">
-                <span>⚙️</span>
-                تعديل توقيت الترجمة متاح من إعدادات المشغل (Subtitle Sync)
-              </span>
+            ) : subAvailable ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="flex items-center gap-1.5 text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  {activeServer?.id === 'vidfast'
+                    ? 'ترجمة عربية مدمجة تلقائياً (?sub=ar)'
+                    : activeServer?.id === 'superembed'
+                    ? 'ترجمة عربية مدمجة (SuperEmbed)'
+                    : 'الترجمة العربية متوفرة ومدمجة'}
+                </span>
+                <span className="text-neutral-300">
+                  (إذا لم تظهر تلقائياً، اضغط على أيقونة <span className="bg-white/10 text-white font-bold px-1.5 py-0.5 rounded">CC 💬</span> داخل شريط تحكم الفيديو)
+                </span>
+              </div>
             ) : (
-              <span className="text-neutral-400">
-                يمكنك التبديل لسيرفر VidLink للحصول على ترجمة عربية مدمجة
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="flex items-center gap-1.5 text-amber-400 font-medium bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">
+                  <span>⚠️</span>
+                  لا تتوفر ترجمة عربية رسمية لهذا العمل حتى الآن
+                </span>
+                <span className="text-neutral-500 text-[11px]">
+                  (العمل جديد جداً ولم يتم طرح ملف ترجمته العربية في قواعد البيانات بعد)
+                </span>
+              </div>
             )}
           </div>
 
-          <a
-            href={`/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType}${season ? `&season=${season}&episode=${episode}` : ''}&download=true&format=srt`}
-            download
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-neutral-200 hover:text-white border border-neutral-700/60 transition-all font-medium whitespace-nowrap self-start sm:self-auto cursor-pointer"
-            title="تحميل ملف الترجمة العربية بصيغة SRT"
-          >
-            <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            <span>📥 سحب وتحميل الترجمة (SRT)</span>
-          </a>
+          {subAvailable ? (
+            <a
+              href={`/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType}${season ? `&season=${season}&episode=${episode}` : ''}&download=true&format=srt`}
+              download
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-neutral-200 hover:text-white border border-neutral-700/60 transition-all font-medium whitespace-nowrap self-start sm:self-auto cursor-pointer"
+              title="تحميل ملف الترجمة العربية بصيغة SRT"
+            >
+              <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span>📥 تحميل ملف الترجمة (SRT)</span>
+            </a>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-neutral-900/40 text-neutral-500 border border-neutral-800/40 text-[11px] font-medium whitespace-nowrap self-start sm:self-auto opacity-70">
+              غير متوفرة للتحميل
+            </span>
+          )}
         </div>
       )}
     </div>
