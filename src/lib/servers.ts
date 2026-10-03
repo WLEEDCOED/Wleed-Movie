@@ -46,11 +46,11 @@ export function generateTVServers(tmdbId: number, season: number, episode: numbe
     },
     {
       id: 'vidlink',
-      name: 'VidLink (مترجم تلقائياً)',
+      name: 'VidLink',
       embedUrl: vidlinkTvUrl,
       quality: '1080p',
       isTrusted: false,
-      language: 'مترجم عربي تلقائي',
+      language: 'مترجم',
     },
   ];
 }
@@ -78,11 +78,11 @@ export function generateMovieServers(tmdbId: number, origin = DEFAULT_ORIGIN): S
     },
     {
       id: 'vidlink',
-      name: 'VidLink (مترجم تلقائياً)',
+      name: 'VidLink',
       embedUrl: vidlinkMovieUrl,
       quality: '1080p',
       isTrusted: false,
-      language: 'مترجم عربي تلقائي',
+      language: 'مترجم',
     },
   ];
 }
