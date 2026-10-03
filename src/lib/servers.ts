@@ -29,11 +29,19 @@ export function generateTVServers(tmdbId: number, season: number, episode: numbe
 
   return [
     {
+      id: 'vidstuck',
+      name: 'VidStuck',
+      embedUrl: `https://vidstuck.xyz/embed/tv/${tmdbId}/${season}/${episode}`,
+      quality: '1080p',
+      isTrusted: true,
+      language: 'مترجم',
+    },
+    {
       id: 'cinesrc',
       name: 'CineSrc',
       embedUrl: `https://cinesrc.st/embed/tv/${tmdbId}?s=${season}&e=${episode}`,
       quality: '1080p',
-      isTrusted: true,
+      isTrusted: false,
       language: 'مترجم',
     },
     {
@@ -44,14 +52,6 @@ export function generateTVServers(tmdbId: number, season: number, episode: numbe
       isTrusted: false,
       language: 'مترجم عربي تلقائي',
     },
-    {
-      id: 'vidstuck',
-      name: 'VidStuck',
-      embedUrl: `https://vidstuck.xyz/embed/tv/${tmdbId}/${season}/${episode}`,
-      quality: '1080p',
-      isTrusted: false,
-      language: 'مترجم',
-    },
   ];
 }
 
@@ -61,11 +61,19 @@ export function generateMovieServers(tmdbId: number, origin = DEFAULT_ORIGIN): S
 
   return [
     {
+      id: 'vidstuck',
+      name: 'VidStuck',
+      embedUrl: `https://vidstuck.xyz/embed/movie/${tmdbId}`,
+      quality: '1080p',
+      isTrusted: true,
+      language: 'مترجم',
+    },
+    {
       id: 'cinesrc',
       name: 'CineSrc',
       embedUrl: `https://cinesrc.st/embed/movie/${tmdbId}`,
       quality: '1080p',
-      isTrusted: true,
+      isTrusted: false,
       language: 'مترجم',
     },
     {
@@ -75,14 +83,6 @@ export function generateMovieServers(tmdbId: number, origin = DEFAULT_ORIGIN): S
       quality: '1080p',
       isTrusted: false,
       language: 'مترجم عربي تلقائي',
-    },
-    {
-      id: 'vidstuck',
-      name: 'VidStuck',
-      embedUrl: `https://vidstuck.xyz/embed/movie/${tmdbId}`,
-      quality: '1080p',
-      isTrusted: false,
-      language: 'مترجم',
     },
   ];
 }
