@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/((?!api/stream-proxy).*)',
+        source: '/((?!api/).*)',
         headers: securityHeaders,
       },
     ];

@@ -71,7 +71,7 @@ export default async function WatchTVPage({ params }: PageProps) {
       </div>
 
       <div className="animate-slide-up">
-        <ServerSwitcher servers={servers} />
+        <ServerSwitcher servers={servers} tmdbId={tmdbId} mediaType="tv" season={seasonNum} episode={episodeNum} />
       </div>
 
       <div className="flex items-center justify-between mt-8 animate-fade-in">

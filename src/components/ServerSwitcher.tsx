@@ -28,11 +28,19 @@ interface SubtitleCue {
 interface ServerSwitcherProps {
   servers: Server[];
   subtitles?: SubtitleTrack[];
+  tmdbId?: number;
+  mediaType?: 'movie' | 'tv';
+  season?: number;
+  episode?: number;
 }
 
 export default function ServerSwitcher({
   servers,
   subtitles = [],
+  tmdbId,
+  mediaType = 'movie',
+  season,
+  episode,
 }: ServerSwitcherProps) {
   const defaultServer =
     servers.find((s) => s.isTrusted) || servers[0] || null;
@@ -215,6 +223,41 @@ export default function ServerSwitcher({
               <span>{server.name}</span>
             </button>
           ))}
+        </div>
+      )}
+
+      {/* خيارات وتنبيهات الترجمة الذكية */}
+      {tmdbId && (
+        <div className="glass rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs border border-neutral-800/80">
+          <div className="flex items-center gap-2 flex-wrap">
+            {activeServer?.id === 'vidlink' ? (
+              <span className="flex items-center gap-1.5 text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                الترجمة العربية مدمجة تلقائياً عبر SubDL
+              </span>
+            ) : activeServer?.id === 'cinesrc' ? (
+              <span className="flex items-center gap-1.5 text-blue-400 font-medium bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-lg">
+                <span>⚙️</span>
+                تعديل توقيت الترجمة متاح من إعدادات المشغل (Subtitle Sync)
+              </span>
+            ) : (
+              <span className="text-neutral-400">
+                يمكنك التبديل لسيرفر VidLink للحصول على ترجمة عربية مدمجة
+              </span>
+            )}
+          </div>
+
+          <a
+            href={`/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType}${season ? `&season=${season}&episode=${episode}` : ''}&download=true&format=srt`}
+            download
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-neutral-200 hover:text-white border border-neutral-700/60 transition-all font-medium whitespace-nowrap self-start sm:self-auto cursor-pointer"
+            title="تحميل ملف الترجمة العربية بصيغة SRT"
+          >
+            <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>📥 سحب وتحميل الترجمة (SRT)</span>
+          </a>
         </div>
       )}
     </div>

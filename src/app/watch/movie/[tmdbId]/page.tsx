@@ -65,7 +65,7 @@ export default async function WatchMoviePage({ params }: PageProps) {
       </div>
 
       <div className="animate-slide-up">
-        <ServerSwitcher servers={servers} />
+        <ServerSwitcher servers={servers} tmdbId={tmdbId} mediaType="movie" />
       </div>
 
       {movie.overview && (
