@@ -26,41 +26,23 @@ export function getSubtitleDownloadUrl(tmdbId: number, type: 'movie' | 'tv' = 'm
 export function generateTVServers(tmdbId: number, season: number, episode: number, origin = DEFAULT_ORIGIN): StreamServer[] {
   const subTvUrl = getSubtitleVttUrl(tmdbId, 'tv', season, episode, origin);
   const vidlinkTvUrl = `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}?primaryColor=dc2626&secondaryColor=991b1b&subtitles=${encodeURIComponent(subTvUrl)}&subtitleLabel=${encodeURIComponent('العربية')}`;
-  const vidfastTvUrl = `https://vidfast.pro/tv/${tmdbId}/${season}/${episode}?sub=ar`;
-  const superembedTvUrl = `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${season}&e=${episode}&sub_url=${encodeURIComponent(subTvUrl)}&sub_label=${encodeURIComponent('العربية')}`;
 
   return [
-    {
-      id: 'vidfast',
-      name: 'VidFast (ترجمة ?sub=ar)',
-      embedUrl: vidfastTvUrl,
-      quality: '1080p',
-      isTrusted: true,
-      language: 'مترجم عربي تلقائي',
-    },
-    {
-      id: 'vidlink',
-      name: 'VidLink (ترجمة SubDL)',
-      embedUrl: vidlinkTvUrl,
-      quality: '1080p',
-      isTrusted: true,
-      language: 'مترجم عربي تلقائي',
-    },
-    {
-      id: 'superembed',
-      name: 'SuperEmbed (ترجمة تلقائية)',
-      embedUrl: superembedTvUrl,
-      quality: '1080p',
-      isTrusted: true,
-      language: 'مترجم عربي',
-    },
     {
       id: 'cinesrc',
       name: 'CineSrc',
       embedUrl: `https://cinesrc.st/embed/tv/${tmdbId}?s=${season}&e=${episode}`,
       quality: '1080p',
-      isTrusted: false,
+      isTrusted: true,
       language: 'مترجم',
+    },
+    {
+      id: 'vidlink',
+      name: 'VidLink (مترجم تلقائياً)',
+      embedUrl: vidlinkTvUrl,
+      quality: '1080p',
+      isTrusted: false,
+      language: 'مترجم عربي تلقائي',
     },
     {
       id: 'vidstuck',
@@ -76,41 +58,23 @@ export function generateTVServers(tmdbId: number, season: number, episode: numbe
 export function generateMovieServers(tmdbId: number, origin = DEFAULT_ORIGIN): StreamServer[] {
   const subMovieUrl = getSubtitleVttUrl(tmdbId, 'movie', undefined, undefined, origin);
   const vidlinkMovieUrl = `https://vidlink.pro/movie/${tmdbId}?primaryColor=dc2626&secondaryColor=991b1b&subtitles=${encodeURIComponent(subMovieUrl)}&subtitleLabel=${encodeURIComponent('العربية')}`;
-  const vidfastMovieUrl = `https://vidfast.pro/movie/${tmdbId}?sub=ar`;
-  const superembedMovieUrl = `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&sub_url=${encodeURIComponent(subMovieUrl)}&sub_label=${encodeURIComponent('العربية')}`;
 
   return [
-    {
-      id: 'vidfast',
-      name: 'VidFast (ترجمة ?sub=ar)',
-      embedUrl: vidfastMovieUrl,
-      quality: '1080p',
-      isTrusted: true,
-      language: 'مترجم عربي تلقائي',
-    },
-    {
-      id: 'vidlink',
-      name: 'VidLink (ترجمة SubDL)',
-      embedUrl: vidlinkMovieUrl,
-      quality: '1080p',
-      isTrusted: true,
-      language: 'مترجم عربي تلقائي',
-    },
-    {
-      id: 'superembed',
-      name: 'SuperEmbed (ترجمة تلقائية)',
-      embedUrl: superembedMovieUrl,
-      quality: '1080p',
-      isTrusted: true,
-      language: 'مترجم عربي',
-    },
     {
       id: 'cinesrc',
       name: 'CineSrc',
       embedUrl: `https://cinesrc.st/embed/movie/${tmdbId}`,
       quality: '1080p',
-      isTrusted: false,
+      isTrusted: true,
       language: 'مترجم',
+    },
+    {
+      id: 'vidlink',
+      name: 'VidLink (مترجم تلقائياً)',
+      embedUrl: vidlinkMovieUrl,
+      quality: '1080p',
+      isTrusted: false,
+      language: 'مترجم عربي تلقائي',
     },
     {
       id: 'vidstuck',
