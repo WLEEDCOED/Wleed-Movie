@@ -10,7 +10,7 @@ export interface CachedSub {
 const cache = new Map<string, CachedSub>();
 const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
 
-const SUBDL_API_KEY = process.env.SUBDL_API_KEY || 'subdl_REDACTED';
+const SUBDL_API_KEY = process.env.SUBDL_API_KEY || '';
 
 export function convertSrtToVtt(srt: string): string {
   const normalized = srt.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
