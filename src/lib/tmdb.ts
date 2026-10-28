@@ -1,6 +1,12 @@
 const TMDB_API_KEY = process.env.TMDB_API_KEY || '';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
+const ARABIC_OVERVIEW_FALLBACK = 'لا يتوفر وصف عربي لهذا العمل حاليًا.';
+
+function arabicText(value?: string | null): string | null {
+  const text = value?.trim();
+  return text && /[\u0600-\u06ff]/.test(text) ? text : null;
+}
 
 export interface TMDBTrending {
   id: number;
@@ -42,6 +48,7 @@ export interface TMDBEpisode {
 export interface TMDBSeriesDetail {
   id: number;
   name: string;
+  original_name?: string;
   overview: string;
   poster_path: string | null;
   backdrop_path: string | null;
@@ -52,11 +59,13 @@ export interface TMDBSeriesDetail {
   seasons: TMDBSeason[];
   genres: { id: number; name: string }[];
   status: string;
+  images?: { logos?: { file_path: string; iso_639_1: string | null }[] };
 }
 
 export interface TMDBMovieDetail {
   id: number;
   title: string;
+  original_title?: string;
   overview: string;
   poster_path: string | null;
   backdrop_path: string | null;
@@ -66,6 +75,21 @@ export interface TMDBMovieDetail {
   genres: { id: number; name: string }[];
   status: string;
   imdb_id: string | null;
+  original_language?: string;
+  budget?: number;
+  revenue?: number;
+  production_companies?: { id: number; name: string; logo_path: string | null }[];
+  images?: { logos?: { file_path: string; iso_639_1: string | null }[] };
+}
+
+export interface TMDBMovieHeroExtras {
+  cast: { id: number; name: string; character: string; profile_path: string | null }[];
+  directors: string[];
+  certification: string | null;
+}
+
+export interface TMDBSeriesHeroExtras {
+  cast: TMDBMovieHeroExtras['cast'];
 }
 
 async function tmdbFetch<T>(endpoint: string, params: Record<string, string> = {}): Promise<T> {
@@ -114,15 +138,15 @@ async function fetchMergedList(
       const arItem = arMap.get(item.id);
       return {
         ...item,
-        // Title and Name in English:
-        title: item.title || item.original_title || 'Unknown',
-        name: item.name || item.original_name || 'Unknown',
+        // Preserve the correct title field for each media type.
+        title: item.title || item.original_title,
+        name: item.name || item.original_name,
         // Poster in English:
         poster_path: item.poster_path,
         // Backdrop from English or fallback:
         backdrop_path: item.backdrop_path || arItem?.backdrop_path || null,
         // Overview in Arabic:
-        overview: (arItem?.overview && arItem.overview.trim().length > 0) ? arItem.overview : item.overview,
+        overview: arabicText(arItem?.overview) || ARABIC_OVERVIEW_FALLBACK,
       };
     });
 
@@ -142,7 +166,7 @@ export function getImageUrl(path: string | null, size: string = 'w500'): string 
 }
 
 export function getTitle(item: TMDBTrending): string {
-  return item.title || item.name || item.original_title || item.original_name || 'Unknown';
+  return item.title || item.name || item.original_title || item.original_name || 'Untitled';
 }
 
 export function getLink(item: TMDBTrending): string {
@@ -155,7 +179,7 @@ export function getYear(item: TMDBTrending): string {
 }
 
 export function getMediaTypeLabel(item: TMDBTrending): string {
-  return item.media_type === 'tv' ? 'مسلسل' : 'فيلم';
+  return item.media_type === 'tv' ? 'TV Series' : 'Movie';
 }
 
 export async function getTrending(): Promise<TMDBTrending[]> {
@@ -173,36 +197,97 @@ export async function getTrendingMovies(): Promise<TMDBTrending[]> {
   return data.results.map(r => ({ ...r, media_type: 'movie' }));
 }
 
+export async function getTopRatedMovies(): Promise<TMDBTrending[]> {
+  const data = await fetchMergedList('/movie/top_rated');
+  return data.results.map(r => ({ ...r, media_type: 'movie' }));
+}
+
+export async function getTopRatedTV(): Promise<TMDBTrending[]> {
+  const data = await fetchMergedList('/tv/top_rated');
+  return data.results.map(r => ({ ...r, media_type: 'tv' }));
+}
+
+export async function getUpcomingMovies(): Promise<TMDBTrending[]> {
+  const data = await fetchMergedList('/movie/upcoming', { region: 'US' });
+  return data.results.map(r => ({ ...r, media_type: 'movie' }));
+}
+
+export async function getNowPlayingMovies(): Promise<TMDBTrending[]> {
+  const data = await fetchMergedList('/movie/now_playing', { region: 'US' });
+  return data.results.map(r => ({ ...r, media_type: 'movie' }));
+}
+
+export async function getMoviesByGenre(genreId: number): Promise<TMDBTrending[]> {
+  const data = await fetchMergedList('/discover/movie', {
+    with_genres: String(genreId),
+    sort_by: 'vote_average.desc',
+    'vote_count.gte': '1000',
+  });
+  return data.results.map(r => ({ ...r, media_type: 'movie' }));
+}
+
 export async function getSeriesDetail(tmdbId: number): Promise<TMDBSeriesDetail> {
   const [enSeries, arSeries] = await Promise.all([
-    tmdbFetch<TMDBSeriesDetail>(`/tv/${tmdbId}`, { language: 'en-US' }),
+    tmdbFetch<TMDBSeriesDetail>(`/tv/${tmdbId}`, { language: 'en-US', append_to_response: 'images', include_image_language: 'en,null' }),
     tmdbFetch<TMDBSeriesDetail>(`/tv/${tmdbId}`, { language: 'ar-SA' }).catch(() => null),
   ]);
 
   return {
     ...enSeries,
-    name: enSeries.name || (enSeries as any).original_name || 'Series',
+    name: enSeries.name || enSeries.original_name || 'Series',
     poster_path: enSeries.poster_path,
     backdrop_path: enSeries.backdrop_path || arSeries?.backdrop_path || null,
-    overview: (arSeries?.overview && arSeries.overview.trim().length > 0) ? arSeries.overview : enSeries.overview,
-    genres: (arSeries?.genres && arSeries.genres.length > 0) ? arSeries.genres : enSeries.genres,
+    overview: arabicText(arSeries?.overview) || ARABIC_OVERVIEW_FALLBACK,
+    genres: enSeries.genres,
   };
 }
 
 export async function getMovieDetail(tmdbId: number): Promise<TMDBMovieDetail> {
   const [enMovie, arMovie] = await Promise.all([
-    tmdbFetch<TMDBMovieDetail>(`/movie/${tmdbId}`, { language: 'en-US' }),
+    tmdbFetch<TMDBMovieDetail>(`/movie/${tmdbId}`, { language: 'en-US', append_to_response: 'images', include_image_language: 'en,null' }),
     tmdbFetch<TMDBMovieDetail>(`/movie/${tmdbId}`, { language: 'ar-SA' }).catch(() => null),
   ]);
 
   return {
     ...enMovie,
-    title: enMovie.title || (enMovie as any).original_title || 'Movie',
+    title: enMovie.title || enMovie.original_title || 'Movie',
     poster_path: enMovie.poster_path,
     backdrop_path: enMovie.backdrop_path || arMovie?.backdrop_path || null,
-    overview: (arMovie?.overview && arMovie.overview.trim().length > 0) ? arMovie.overview : enMovie.overview,
-    genres: (arMovie?.genres && arMovie.genres.length > 0) ? arMovie.genres : enMovie.genres,
+    overview: arabicText(arMovie?.overview) || ARABIC_OVERVIEW_FALLBACK,
+    genres: enMovie.genres,
   };
+}
+
+/** Optional hero details; a failed supplemental request never blocks movie playback. */
+export async function getMovieHeroExtras(tmdbId: number): Promise<TMDBMovieHeroExtras> {
+  type Credits = {
+    cast?: TMDBMovieHeroExtras['cast'];
+    crew?: { name: string; job: string }[];
+  };
+  type ReleaseDates = {
+    results?: { iso_3166_1: string; release_dates: { certification: string }[] }[];
+  };
+
+  const [credits, ratings] = await Promise.all([
+    tmdbFetch<Credits>(`/movie/${tmdbId}/credits`).catch(() => null),
+    tmdbFetch<ReleaseDates>(`/movie/${tmdbId}/release_dates`).catch(() => null),
+  ]);
+  const certification = ['US', 'SA', 'GB', 'CA']
+    .flatMap(country => ratings?.results?.find(result => result.iso_3166_1 === country)?.release_dates ?? [])
+    .map(release => release.certification?.trim())
+    .find(Boolean) ?? null;
+
+  return {
+    cast: credits?.cast?.slice(0, 18) ?? [],
+    directors: [...new Set(credits?.crew?.filter(member => member.job === 'Director').map(member => member.name) ?? [])],
+    certification,
+  };
+}
+
+/** Cast is optional and must not delay or block the episode list on API errors. */
+export async function getSeriesHeroExtras(tmdbId: number): Promise<TMDBSeriesHeroExtras> {
+  const credits = await tmdbFetch<{ cast?: TMDBSeriesHeroExtras['cast'] }>(`/tv/${tmdbId}/credits`).catch(() => null);
+  return { cast: credits?.cast?.slice(0, 18) ?? [] };
 }
 
 export async function getSeasonEpisodes(tmdbId: number, seasonNumber: number): Promise<TMDBEpisode[]> {
@@ -218,7 +303,7 @@ export async function getSeasonEpisodes(tmdbId: number, seasonNumber: number): P
     return {
       ...ep,
       name: ep.name || `Episode ${ep.episode_number}`,
-      overview: (arEp?.overview && arEp.overview.trim().length > 0) ? arEp.overview : ep.overview,
+      overview: arabicText(arEp?.overview) || 'لا يتوفر وصف عربي لهذه الحلقة حاليًا.',
     };
   });
 }
@@ -267,6 +352,8 @@ export interface DiscoverParams {
   genre?: number;
   year?: number;
   provider?: number;
+  sort?: string;
+  country?: string;
 }
 
 export interface DiscoverResult {
@@ -276,14 +363,27 @@ export interface DiscoverResult {
   page: number;
 }
 
+export async function getCategoryPage(type: 'movie' | 'tv', category: 'trending' | 'top_rated' | 'upcoming' | 'now_playing', page = 1): Promise<DiscoverResult> {
+  const endpoint = category === 'trending' ? `/trending/${type}/week` : `/${type}/${category}`;
+  const data = await fetchMergedList(endpoint, { page: String(page), ...(category === 'upcoming' || category === 'now_playing' ? { region: 'US' } : {}) });
+  return {
+    results: data.results.map(item => ({ ...item, media_type: type })),
+    totalPages: Math.min(data.total_pages || 1, 500),
+    totalResults: data.total_results || 0,
+    page: data.page || page,
+  };
+}
+
 export async function discoverMovies(params: DiscoverParams = {}): Promise<DiscoverResult> {
   const queryParams: Record<string, string> = {
-    sort_by: 'popularity.desc',
+    sort_by: params.sort || 'popularity.desc',
     page: (params.page || 1).toString(),
     watch_region: 'US',
   };
   if (params.genre) queryParams.with_genres = params.genre.toString();
   if (params.year) queryParams.primary_release_year = params.year.toString();
+  if (params.country) queryParams.with_origin_country = params.country;
+  if (params.sort === 'vote_average.desc') queryParams['vote_count.gte'] = '200';
   if (params.provider) {
     queryParams.with_watch_providers = params.provider.toString();
   }
@@ -299,12 +399,14 @@ export async function discoverMovies(params: DiscoverParams = {}): Promise<Disco
 
 export async function discoverTV(params: DiscoverParams = {}): Promise<DiscoverResult> {
   const queryParams: Record<string, string> = {
-    sort_by: 'popularity.desc',
+    sort_by: params.sort === 'primary_release_date.desc' ? 'first_air_date.desc' : params.sort || 'popularity.desc',
     page: (params.page || 1).toString(),
     watch_region: 'US',
   };
   if (params.genre) queryParams.with_genres = params.genre.toString();
   if (params.year) queryParams.first_air_date_year = params.year.toString();
+  if (params.country) queryParams.with_origin_country = params.country;
+  if (params.sort === 'vote_average.desc') queryParams['vote_count.gte'] = '200';
   if (params.provider) {
     queryParams.with_watch_providers = params.provider.toString();
   }

@@ -1,106 +1,60 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import SearchForm from './SearchForm';
+import { usePathname, useRouter } from 'next/navigation';
+import AppearanceSettings from './AppearanceSettings';
+import AmbientCanvas from './AmbientCanvas';
+
+const links = [
+  { href: '/', label: 'Home', icon: '⌂' },
+  { href: '/movies', label: 'Movies', icon: '▧' },
+  { href: '/series', label: 'Shows', icon: '▣' },
+  { href: '/lists', label: 'My List', icon: '▱' },
+];
 
 export default function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
+  const isWatchPage = pathname?.startsWith('/watch/');
+  const router = useRouter();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { setSearchOpen(false); setSettingsOpen(false); }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setSettingsOpen(false);
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  useEffect(() => { setMenuOpen(false); }, [pathname]);
+  const search = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!query.trim()) return;
+    router.push(`/?q=${encodeURIComponent(query.trim())}`);
+    setSearchOpen(false);
+  };
 
-  const links = [
-    { href: '/', label: 'الرئيسية' },
-    { href: '/movies', label: 'الأفلام' },
-    { href: '/series', label: 'المسلسلات' },
-  ];
-
-  return (
-    <header
-      className={`fixed top-0 w-full z-50 transition-colors duration-200 ${
-        isScrolled || menuOpen
-          ? 'bg-black/95 shadow-lg shadow-red-900/10 py-3'
-          : 'bg-gradient-to-b from-black/80 to-transparent py-4'
-      }`}
-    >
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-3">
-          {/* Logo */}
-          <Link href="/" className="shrink-0 group">
-            <span className="text-xl md:text-2xl font-black text-red-600 tracking-tight group-hover:text-red-500 transition-colors">
-              WleedMovie
-            </span>
-          </Link>
-
-          {/* Search - desktop */}
-          <div className="hidden md:flex flex-1 max-w-md mx-4">
-            <SearchForm />
-          </div>
-
-          {/* Nav links - desktop */}
-          <div className="hidden md:flex items-center gap-5 shrink-0">
-            {links.map(link => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`text-sm font-semibold transition-colors ${
-                  pathname === link.href ? 'text-white' : 'text-neutral-400 hover:text-white'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
-            onClick={() => setMenuOpen(v => !v)}
-            aria-label="القائمة"
-          >
-            {menuOpen ? (
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-          </button>
-        </div>
-
-        {/* Mobile dropdown */}
-        {menuOpen && (
-          <div className="md:hidden mt-3 pb-4 border-t border-neutral-800/50 pt-4 space-y-4">
-            <SearchForm />
-            <div className="flex flex-col gap-1">
-              {links.map(link => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-                    pathname === link.href
-                      ? 'bg-red-600/20 text-white'
-                      : 'text-neutral-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
+  return <>
+    {!isWatchPage && pathname !== '/admin' && <div className="ambient-scene" aria-hidden="true"><AmbientCanvas /></div>}
+    <header className={`site-header${isWatchPage ? ' watch-header' : ''}`}>
+      <Link href="/" className="site-logo" aria-label="WleedMovie home">
+        <span className="logo-clapper">◩</span><span className="logo-word">WLEED<span>MOVIE</span></span>
+      </Link>
+      <nav className="floating-nav" aria-label="Main navigation">
+        {links.map(link => <Link key={link.href} href={link.href} onClick={() => { setSearchOpen(false); setSettingsOpen(false); }} className={`nav-link ${pathname === link.href ? 'active' : ''}`}><span className="nav-icon">{link.icon}</span><span className="nav-label">{link.label}</span></Link>)}
+        <span className="nav-divider" />
+        <button type="button" className="nav-tool" aria-label="Search" onClick={() => { setSettingsOpen(false); setSearchOpen(true); }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><circle cx="10.8" cy="10.8" r="6.7"/><path d="m16 16 5 5"/></svg></button>
+        <button type="button" className="nav-tool" aria-label="Settings" aria-expanded={settingsOpen} onClick={() => { setSearchOpen(false); setSettingsOpen(value => !value); }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10 2h4l.6 2.2 1.8.8 2-.9 2.8 2.8-.9 2 .8 1.8L23 11v4l-2.2.6-.8 1.8.9 2-2.8 2.8-2-.9-1.8.8L14 24h-4l-.6-2.2-1.8-.8-2 .9-2.8-2.8.9-2-.8-1.8L1 15v-4l2.2-.6.8-1.8-.9-2L5.9 3.8l2 .9 1.8-.8L10 2Z" transform="translate(0 -1) scale(.96)"/><circle cx="12" cy="12" r="3"/></svg></button>
       </nav>
     </header>
-  );
+    <AppearanceSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    {searchOpen && <div className="search-overlay" role="dialog" aria-modal="true" aria-label="Search movies and shows" onClick={() => setSearchOpen(false)}><div className="search-panel" onClick={event => event.stopPropagation()}><div className="search-panel-top"><span>Search</span><button type="button" onClick={() => setSearchOpen(false)} aria-label="Close search">✕</button></div><form onSubmit={search}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder="Search movies and shows..." aria-label="Search movies and shows" /><button type="submit">Search</button></form><p>Press Enter to search the catalog.</p></div></div>}
+  </>;
 }
