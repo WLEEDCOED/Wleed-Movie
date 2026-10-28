@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+cinejoy_dhj.js
+backup-before-animated-atlantic-2026-10-20/
+backup-before-canvas-themes-2026-10-20/
+atlantic-ambient-preview.png
