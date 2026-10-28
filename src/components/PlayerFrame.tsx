@@ -339,7 +339,7 @@ export default function PlayerFrame({ src, title, children, watchInfo, blockPopu
           title={title}
           className="w-full h-full"
           allowFullScreen
-          referrerPolicy={src.startsWith('https://embed.vidrift.net/') ? 'strict-origin-when-cross-origin' : 'origin'}
+          referrerPolicy={src.startsWith('https://embedwave.cc/') ? 'no-referrer' : src.startsWith('https://embed.vidrift.net/') ? 'strict-origin-when-cross-origin' : 'origin'}
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
           sandbox={blockPopups && !src.startsWith('https://embed.vidrift.net/') ? 'allow-scripts allow-same-origin allow-forms allow-downloads allow-presentation allow-orientation-lock' : undefined}
           onLoad={() => {

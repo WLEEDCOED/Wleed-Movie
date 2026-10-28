@@ -48,6 +48,14 @@ export function generateTVServers(tmdbId: number, season: number, episode: numbe
       isTrusted: false,
       language: 'مترجم',
     },
+    {
+      id: 'embedwave',
+      name: 'EmbedWave',
+      embedUrl: `https://embedwave.cc/embed/tv/${tmdbId}/${season}/${episode}`,
+      quality: 'HD',
+      isTrusted: false,
+      language: 'متعدد',
+    },
   ];
 }
 
@@ -84,6 +92,14 @@ export function generateMovieServers(tmdbId: number): StreamServer[] {
       quality: 'HD',
       isTrusted: false,
       language: 'مترجم',
+    },
+    {
+      id: 'embedwave',
+      name: 'EmbedWave',
+      embedUrl: `https://embedwave.cc/embed/movie/${tmdbId}`,
+      quality: 'HD',
+      isTrusted: false,
+      language: 'متعدد',
     },
   ];
 }
