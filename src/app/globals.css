@@ -592,13 +592,23 @@ html[data-detail-view="compact"] .movie-detail-page .movie-hero-copy { width: mi
 .watch-page { padding-top: calc(118px + env(safe-area-inset-top)); }
 .player-frame-fullscreen .player-expand-button { min-height: 44px; touch-action: none; }
 /* WebKit can keep an embedded player's old dimensions after the wrapper enters fullscreen. */
-.player-frame:fullscreen, .player-frame:-webkit-full-screen { width: 100vw !important; height: 100vh !important; max-width: none !important; margin: 0 !important; border: 0; border-radius: 0; }
-.player-frame:fullscreen .player-viewport, .player-frame:-webkit-full-screen .player-viewport { width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; }
-.player-frame:fullscreen .player-viewport iframe, .player-frame:-webkit-full-screen .player-viewport iframe { position: absolute; inset: 0; width: 100%; height: 100%; }
-.player-frame iframe:fullscreen, .player-frame iframe:-webkit-full-screen { width: 100vw !important; height: 100vh !important; border: 0; }
+.player-frame:fullscreen { width: 100vw !important; height: 100vh !important; max-width: none !important; margin: 0 !important; border: 0; border-radius: 0; }
+.player-frame:-webkit-full-screen { width: 100vw !important; height: 100vh !important; max-width: none !important; margin: 0 !important; border: 0; border-radius: 0; }
+.player-frame:fullscreen .player-viewport { width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; }
+.player-frame:-webkit-full-screen .player-viewport { width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; }
+.player-frame:fullscreen .player-viewport iframe { position: absolute; inset: 0; width: 100%; height: 100%; }
+.player-frame:-webkit-full-screen .player-viewport iframe { position: absolute; inset: 0; width: 100%; height: 100%; }
+.player-frame iframe:fullscreen { width: 100vw !important; height: 100vh !important; border: 0; }
+.player-frame iframe:-webkit-full-screen { width: 100vw !important; height: 100vh !important; border: 0; }
 .player-swipe-handle { position: absolute; z-index: 20; top: calc(70px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(42vw, 180px); height: 48px; display: flex; align-items: flex-start; justify-content: center; padding-top: 10px; touch-action: none; }
 .player-swipe-handle span { width: 52px; height: 5px; border-radius: 999px; background: #fff; box-shadow: 0 1px 8px #000; opacity: .85; }
-@supports (height: 100dvh) { .player-frame-expanded, .player-frame:fullscreen, .player-frame:-webkit-full-screen, .player-frame iframe:fullscreen, .player-frame iframe:-webkit-full-screen { height: 100dvh !important; } }
+@supports (height: 100dvh) {
+  .player-frame-expanded { height: 100dvh !important; }
+  .player-frame:fullscreen { height: 100dvh !important; }
+  .player-frame:-webkit-full-screen { height: 100dvh !important; }
+  .player-frame iframe:fullscreen { height: 100dvh !important; }
+  .player-frame iframe:-webkit-full-screen { height: 100dvh !important; }
+}
 @media (min-width: 741px) and (max-width: 1100px) {
   .watch-header { height: calc(102px + env(safe-area-inset-top)); padding-top: calc(26px + env(safe-area-inset-top)); }
   .watch-server-list > button { min-height: 44px; }
