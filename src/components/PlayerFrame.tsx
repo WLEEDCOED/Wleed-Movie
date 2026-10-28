@@ -3,11 +3,15 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type ReactNode,
 } from 'react';
+import { addVisibleWatchTime, getResumePosition, recordWatchVisit, saveWatchPosition, type WatchInfo } from '@/lib/watch-history';
+import { PLAYER_PRESENCE_EVENT } from '@/lib/analytics-events';
 
 /** Vendors still ship prefixed versions of the Fullscreen API (Safari, old Edge). */
 type FullscreenElement = HTMLDivElement & {
@@ -27,6 +31,9 @@ const FULLSCREEN_CHANGE_EVENTS = [
   'webkitfullscreenchange',
   'MSFullscreenChange',
 ] as const;
+const noSubscription = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 
 function getFullscreenElement(doc: FullscreenDocument): Element | null {
   return (
@@ -43,6 +50,8 @@ interface PlayerFrameProps {
   title: string;
   /** Overlays drawn on top of the player, e.g. subtitles or the live badge. */
   children?: ReactNode;
+  watchInfo?: WatchInfo;
+  blockPopups?: boolean;
 }
 
 /**
@@ -55,8 +64,14 @@ interface PlayerFrameProps {
  *    expansion: the frame fills the viewport, the page is locked and the site
  *    chrome is hidden. The iframe is never re-parented, so playback continues.
  */
-export default function PlayerFrame({ src, title, children }: PlayerFrameProps) {
+export default function PlayerFrame({ src, title, children, watchInfo, blockPopups = false }: PlayerFrameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const swipeStartYRef = useRef<number | null>(null);
+  const ignoreClickUntilRef = useRef(0);
+  const lastPositionRef = useRef({ seconds: 0, savedAt: 0 });
+  const episodeChangedRef = useRef(false);
+  const hasHydrated = useSyncExternalStore(noSubscription, clientSnapshot, serverSnapshot);
   const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -64,6 +79,106 @@ export default function PlayerFrame({ src, title, children }: PlayerFrameProps) 
   // through the CSS fallback. The frame then fills all available space and the
   // embedded player letterboxes the video itself.
   const isFullscreen = isNativeFullscreen || isExpanded;
+
+  const frame = useMemo(() => {
+    if (!hasHydrated) return null;
+    const resume = watchInfo ? getResumePosition(watchInfo) : null;
+    const url = new URL(src);
+    if (url.origin === 'https://cinesrc.st' && resume !== null) {
+      url.searchParams.set('t', String(Math.floor(resume)));
+      url.searchParams.set('continueprompt', 'false');
+    }
+    return { source: src, url: url.toString(), resume };
+  }, [hasHydrated, src, watchInfo]);
+
+  useEffect(() => {
+    episodeChangedRef.current = false;
+    lastPositionRef.current = { seconds: frame?.resume ?? 0, savedAt: 0 };
+  }, [frame?.url, frame?.resume]);
+
+  useEffect(() => {
+    if (!watchInfo || frame?.source !== src) return;
+    const info = watchInfo;
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== iframeRef.current?.contentWindow || !event.data || typeof event.data !== 'object') return;
+      const data = event.data as Record<string, unknown>;
+      const type = data.type;
+      let position: unknown = data.currentTime;
+      if (event.origin === 'https://cinesrc.st' && src.startsWith('https://cinesrc.st/')) {
+        if (type === 'cinesrc:nextepisode' && info.mediaType === 'tv' &&
+            (Number(data.season) !== info.season || Number(data.episode) !== info.episode)) {
+          episodeChangedRef.current = true;
+        }
+        if (episodeChangedRef.current) return;
+        if (type === 'cinesrc:pause') {
+          iframeRef.current?.contentWindow?.postMessage({ type: 'cinesrc:command', command: 'getCurrentTime', args: [] }, 'https://cinesrc.st');
+          return;
+        }
+        if (type === 'cinesrc:response' && data.command === 'getCurrentTime') position = data.result;
+        else if (type !== 'cinesrc:timeupdate' && type !== 'cinesrc:seeked') return;
+      } else if (event.origin === 'https://embed.vidrift.net' && src.startsWith('https://embed.vidrift.net/')) {
+        if (Number(data.tmdbId) !== info.mediaId || data.mediaType !== info.mediaType ||
+            (info.mediaType === 'tv' && (Number(data.season) !== info.season || Number(data.episode) !== info.episode))) return;
+        if (type !== 'vidrift:progress' && type !== 'vidrift:paused') return;
+      } else {
+        return;
+      }
+      if (typeof position !== 'number' || !Number.isFinite(position) || position < 0) return;
+      const now = Date.now();
+      const last = lastPositionRef.current;
+      if (type !== 'cinesrc:seeked' && type !== 'cinesrc:response' && type !== 'vidrift:paused' && now - last.savedAt < 2000 && Math.abs(position - last.seconds) < 10) return;
+      saveWatchPosition(info, position, typeof data.duration === 'number' ? data.duration : undefined);
+      lastPositionRef.current = { seconds: position, savedAt: now };
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [frame?.source, src, watchInfo]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !watchInfo) return;
+    const info = watchInfo;
+    let visible = false;
+    let lastTick = performance.now();
+    const announce = (isWatching: boolean) => {
+      window.dispatchEvent(new CustomEvent(PLAYER_PRESENCE_EVENT, {
+        detail: { watching: isWatching },
+      }));
+    };
+    const flush = () => {
+      const now = performance.now();
+      if (visible && document.visibilityState === 'visible') {
+        addVisibleWatchTime(info, Math.min(10, (now - lastTick) / 1000));
+      }
+      lastTick = now;
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.intersectionRatio >= .25 && !visible) {
+        visible = true;
+        lastTick = performance.now();
+        recordWatchVisit(info);
+        announce(document.visibilityState === 'visible');
+      } else if (entry.intersectionRatio < .25 && visible) {
+        flush();
+        visible = false;
+        announce(false);
+      }
+    }, { threshold: .25 });
+    observer.observe(container);
+    const timer = window.setInterval(flush, 5000);
+    const onVisibility = () => {
+      flush();
+      announce(visible && document.visibilityState === 'visible');
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      flush();
+      announce(false);
+      observer.disconnect();
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [watchInfo]);
 
   // Stay in sync with real fullscreen (Esc key, F11, browser UI...).
   useEffect(() => {
@@ -118,28 +233,31 @@ export default function PlayerFrame({ src, title, children }: PlayerFrameProps) 
     };
   }, [isExpanded]);
 
-  const toggleFullscreen = useCallback(async () => {
-    const container = containerRef.current as FullscreenElement | null;
-    if (!container) return;
-
+  const collapseFullscreen = useCallback(async () => {
     if (isExpanded) {
       setIsExpanded(false);
       return;
     }
+    const doc = document as FullscreenDocument;
+    if (getFullscreenElement(doc) !== containerRef.current) return;
+    const exitFullscreen =
+      doc.exitFullscreen?.bind(doc) ??
+      doc.webkitExitFullscreen?.bind(doc) ??
+      doc.msExitFullscreen?.bind(doc);
+    try {
+      await exitFullscreen?.();
+    } catch {
+      // Already out of fullscreen, nothing else to do.
+    }
+  }, [isExpanded]);
+
+  const toggleFullscreen = useCallback(async () => {
+    const container = containerRef.current as FullscreenElement | null;
+    if (!container) return;
 
     const doc = document as FullscreenDocument;
-    const fullscreenElement = getFullscreenElement(doc);
-
-    if (fullscreenElement) {
-      const exitFullscreen =
-        doc.exitFullscreen?.bind(doc) ??
-        doc.webkitExitFullscreen?.bind(doc) ??
-        doc.msExitFullscreen?.bind(doc);
-      try {
-        await exitFullscreen?.();
-      } catch {
-        // Already out of fullscreen, nothing else to do.
-      }
+    if (isExpanded || getFullscreenElement(doc) === container) {
+      await collapseFullscreen();
       return;
     }
 
@@ -159,7 +277,36 @@ export default function PlayerFrame({ src, title, children }: PlayerFrameProps) 
     }
 
     setIsExpanded(true);
-  }, [isExpanded]);
+  }, [collapseFullscreen, isExpanded]);
+
+  // The iframe owns its own touch events. A downward swipe on the visible top
+  // control or the letterbox area, and wheel scrolling outside the iframe,
+  // return the player to its place without interrupting playback.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    let distance = 0;
+    const onWheel = (event: WheelEvent) => {
+      distance = event.deltaY > 0 ? distance + event.deltaY : 0;
+      if (distance >= 70) {
+        distance = 0;
+        void collapseFullscreen();
+      }
+    };
+    window.addEventListener('wheel', onWheel, { passive: true });
+    return () => window.removeEventListener('wheel', onWheel);
+  }, [collapseFullscreen, isFullscreen]);
+
+  const onTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (isFullscreen) swipeStartYRef.current = event.touches[0]?.clientY ?? null;
+  };
+  const onTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const startY = swipeStartYRef.current;
+    swipeStartYRef.current = null;
+    if (!isFullscreen || startY === null) return;
+    if ((event.changedTouches[0]?.clientY ?? startY) - startY < 65) return;
+    ignoreClickUntilRef.current = Date.now() + 700;
+    void collapseFullscreen();
+  };
 
   const containerStyle: CSSProperties | undefined = isExpanded
     ? {
@@ -167,38 +314,57 @@ export default function PlayerFrame({ src, title, children }: PlayerFrameProps) 
         top: 0,
         left: 0,
         width: '100vw',
-        height: '100dvh',
+        height: '100vh',
         zIndex: 9999,
         margin: 0,
         borderRadius: 0,
       }
     : undefined;
+  const activeFrame = frame?.source === src ? frame : null;
 
   return (
     <div
       ref={containerRef}
       style={containerStyle}
-      className="relative rounded-2xl overflow-hidden bg-black border border-neutral-800/50 shadow-2xl shadow-black/50"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={() => { swipeStartYRef.current = null; }}
+      className={`player-frame relative rounded-2xl overflow-hidden bg-black border border-neutral-800/50 shadow-2xl shadow-black/50${isFullscreen ? ' player-frame-fullscreen' : ''}${isExpanded ? ' player-frame-expanded' : ''}`}
     >
-      <div className={isFullscreen ? 'relative w-full h-full' : 'relative aspect-video'}>
-        <iframe
-          key={src}
-          src={src}
+      <div className={isFullscreen ? 'player-viewport relative w-full h-full' : 'player-viewport relative aspect-video'}>
+        {activeFrame && <iframe
+          ref={iframeRef}
+          key={`${activeFrame.url}-${blockPopups}`}
+          src={activeFrame.url}
           title={title}
           className="w-full h-full"
           allowFullScreen
-          referrerPolicy="origin"
+          referrerPolicy={src.startsWith('https://embed.vidrift.net/') ? 'strict-origin-when-cross-origin' : 'origin'}
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-        />
+          sandbox={blockPopups && !src.startsWith('https://embed.vidrift.net/') ? 'allow-scripts allow-same-origin allow-forms allow-downloads allow-presentation allow-orientation-lock' : undefined}
+          onLoad={() => {
+            if (src.startsWith('https://embed.vidrift.net/') && activeFrame.resume !== null) {
+              iframeRef.current?.contentWindow?.postMessage({ type: 'vidrift:resume', currentTime: activeFrame.resume }, 'https://embed.vidrift.net');
+            }
+          }}
+        />}
 
         {children}
 
+      </div>
+
+      {isFullscreen && (
+        <div className="player-swipe-handle" aria-hidden="true">
+          <span />
+        </div>
+      )}
+
         <button
           type="button"
-          onClick={toggleFullscreen}
-          aria-label={isFullscreen ? 'تصغير الشاشة' : 'تكبير الشاشة'}
-          title={isFullscreen ? 'تصغير الشاشة' : 'تكبير الشاشة'}
-          className="absolute top-3 left-3 z-20 flex items-center gap-1.5 rounded-lg bg-black/70 px-2.5 py-2 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/90 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          onClick={() => { if (Date.now() >= ignoreClickUntilRef.current) void toggleFullscreen(); }}
+          aria-label={isFullscreen ? 'اسحب للأسفل أو اضغط لتصغير الشاشة' : 'تكبير الشاشة'}
+          title={isFullscreen ? 'اسحب للأسفل أو اضغط لتصغير الشاشة' : 'تكبير الشاشة'}
+          className="player-expand-button absolute top-3 left-3 z-20 flex items-center gap-1.5 rounded-lg bg-black/70 px-2.5 py-2 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/90 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
         >
           {isFullscreen ? (
             <svg
@@ -229,11 +395,10 @@ export default function PlayerFrame({ src, title, children }: PlayerFrameProps) 
               />
             </svg>
           )}
-          <span className="hidden sm:inline">
-            {isFullscreen ? 'تصغير' : 'تكبير'}
+          <span className="player-expand-label hidden sm:inline">
+            {isFullscreen ? 'اسحب ↓ للتصغير' : 'تكبير'}
           </span>
         </button>
-      </div>
     </div>
   );
 }

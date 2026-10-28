@@ -15,14 +15,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const series = await getSeriesDetail(parseInt(tmdbId));
     return {
       title: `${series.name} S${season}E${episode} | WleedMovie`,
-      description: `شاهد ${series.name} الموسم ${season} الحلقة ${episode} مترجم`,
+      description: series.overview,
     };
   } catch {
-    return { title: 'غير موجود' };
+    return { title: 'Not found' };
   }
 }
-
-export const dynamic = 'force-dynamic';
 
 export default async function WatchTVPage({ params }: PageProps) {
   const { tmdbId: tmdbIdStr, season: seasonStr, episode: episodeStr } = await params;
@@ -52,9 +50,9 @@ export default async function WatchTVPage({ params }: PageProps) {
   const nextEp = episodes.find((e) => e.episode_number === episodeNum + 1);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="flex items-center gap-2 text-sm text-neutral-400 mb-4 animate-fade-in">
-        <Link href="/" className="hover:text-white transition-colors">الرئيسية</Link>
+    <div className="watch-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="watch-breadcrumb flex items-center gap-2 text-sm text-neutral-400 mb-4 animate-fade-in">
+        <Link href="/" className="hover:text-white transition-colors">Home</Link>
         <span>/</span>
         <Link href={`/series/${tmdbId}`} className="hover:text-white transition-colors">{series.name}</Link>
         <span>/</span>
@@ -63,15 +61,15 @@ export default async function WatchTVPage({ params }: PageProps) {
 
       <div className="mb-6 animate-fade-in">
         <h1 className="text-2xl md:text-3xl font-black mb-2">
-          {currentEp?.name || `الحلقة ${episodeNum}`}
+          {currentEp?.name || `Episode ${episodeNum}`}
         </h1>
         <p className="text-neutral-400">
-          {series.name} — الموسم {seasonNum}، الحلقة {episodeNum}
+          {series.name} — Season {seasonNum}, Episode {episodeNum}
         </p>
       </div>
 
       <div className="animate-slide-up">
-        <ServerSwitcher servers={servers} tmdbId={tmdbId} mediaType="tv" season={seasonNum} episode={episodeNum} />
+        <ServerSwitcher servers={servers} tmdbId={tmdbId} mediaType="tv" season={seasonNum} episode={episodeNum} watchInfo={{ mediaType: 'tv', mediaId: tmdbId, title: series.name, imageUrl: getImageUrl(currentEp?.still_path || series.backdrop_path, 'w780'), href: `/watch/tv/${tmdbId}/${seasonNum}/${episodeNum}`, runtimeSeconds: currentEp?.runtime ? currentEp.runtime * 60 : undefined, season: seasonNum, episode: episodeNum }} />
       </div>
 
       <div className="flex items-center justify-between mt-8 animate-fade-in">
@@ -80,12 +78,12 @@ export default async function WatchTVPage({ params }: PageProps) {
             <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-            <span className="text-sm">الحلقة السابقة</span>
+            <span className="text-sm">Previous Episode</span>
           </Link>
         ) : <div />}
         {nextEp ? (
           <Link href={`/watch/tv/${tmdbId}/${seasonNum}/${nextEp.episode_number}`} className="flex items-center gap-2 glass rounded-xl px-5 py-3 hover:bg-white/10 transition-colors group">
-            <span className="text-sm">الحلقة التالية</span>
+            <span className="text-sm">Next Episode</span>
             <svg className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -95,8 +93,8 @@ export default async function WatchTVPage({ params }: PageProps) {
 
       {currentEp?.overview && (
         <div className="mt-8 glass rounded-xl p-6 animate-fade-in">
-          <h2 className="text-lg font-bold mb-2">عن الحلقة</h2>
-          <p className="text-neutral-300 leading-relaxed">{currentEp.overview}</p>
+          <h2 className="text-lg font-bold mb-2">About This Episode</h2>
+          <p className="text-neutral-300 leading-relaxed" dir="auto">{currentEp.overview}</p>
         </div>
       )}
 
@@ -104,7 +102,7 @@ export default async function WatchTVPage({ params }: PageProps) {
         <div className="mt-8 animate-fade-in">
           <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full" />
-            حلقات الموسم {seasonNum}
+            Season {seasonNum} Episodes
           </h2>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
             {episodes.map((ep) => (

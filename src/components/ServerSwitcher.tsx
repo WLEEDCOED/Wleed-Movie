@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import PlayerFrame from './PlayerFrame';
+import type { WatchInfo } from '@/lib/watch-history';
 
 interface Server {
   id: string;
@@ -12,133 +13,44 @@ interface Server {
   isTrusted: boolean;
 }
 
-interface SubtitleTrack {
-  id: number;
-  language: string;
-  label: string;
-  filePath: string;
-}
-
-interface SubtitleCue {
-  startTime: number;
-  endTime: number;
-  text: string;
-}
-
 interface ServerSwitcherProps {
   servers: Server[];
-  subtitles?: SubtitleTrack[];
   tmdbId?: number;
   mediaType?: 'movie' | 'tv';
   season?: number;
   episode?: number;
+  watchInfo?: WatchInfo;
 }
 
 export default function ServerSwitcher({
   servers,
-  subtitles = [],
   tmdbId,
   mediaType = 'movie',
   season,
   episode,
+  watchInfo,
 }: ServerSwitcherProps) {
   const defaultServer =
     servers.find((s) => s.isTrusted) || servers[0] || null;
   const [activeServer, setActiveServer] = useState<Server | null>(
     defaultServer
   );
-
-  const defaultSub = subtitles.find((s) => s.language === 'ar') || null;
-  const [activeSubtitle, setActiveSubtitle] = useState<SubtitleTrack | null>(
-    defaultSub
-  );
-  const [subtitleEnabled, setSubtitleEnabled] = useState(!!defaultSub);
-  const [cues, setCues] = useState<SubtitleCue[]>([]);
-  const [currentText, setCurrentText] = useState('');
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [subAvailable, setSubAvailable] = useState<boolean | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef<number>(Date.now());
+  const [blockPopups, setBlockPopups] = useState(true);
+  const [availability, setAvailability] = useState<{ key: string; available: boolean } | null>(null);
+  const availabilityKey = `${mediaType}-${tmdbId ?? 0}-${season ?? 0}-${episode ?? 0}`;
+  const subAvailable = availability?.key === availabilityKey ? availability.available : null;
 
   useEffect(() => {
     if (!tmdbId) return;
-    setSubAvailable(null);
+    const controller = new AbortController();
     const checkUrl = `/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType || 'movie'}${season ? `&season=${season}&episode=${episode}` : ''}&check=true`;
-    fetch(checkUrl)
+    fetch(checkUrl, { signal: controller.signal })
       .then((res) => res.json())
-      .then((data) => setSubAvailable(!!data.hasSub))
-      .catch(() => setSubAvailable(false));
-  }, [tmdbId, mediaType, season, episode]);
+      .then((data) => setAvailability({ key: availabilityKey, available: !!data.hasSub }))
+      .catch(() => { if (!controller.signal.aborted) setAvailability({ key: availabilityKey, available: false }); });
+    return () => controller.abort();
+  }, [tmdbId, mediaType, season, episode, availabilityKey]);
 
-  const parseVTT = useCallback((vttText: string): SubtitleCue[] => {
-    const parsed: SubtitleCue[] = [];
-    const blocks = vttText.split('\n\n');
-    for (const block of blocks) {
-      const lines = block.trim().split('\n');
-      for (let i = 0; i < lines.length; i++) {
-        const timeLine = lines[i];
-        if (timeLine && timeLine.includes('-->')) {
-          const [startStr, endStr] = timeLine.split('-->');
-          const startTime = parseTimestamp(startStr.trim());
-          const endTime = parseTimestamp(endStr.trim());
-          const textLines = lines.slice(i + 1).join('\n').trim();
-          if (textLines && !isNaN(startTime) && !isNaN(endTime)) {
-            parsed.push({ startTime, endTime, text: textLines });
-          }
-          break;
-        }
-      }
-    }
-    return parsed;
-  }, []);
-
-  function parseTimestamp(ts: string): number {
-    const parts = ts.split(':');
-    if (parts.length === 3) {
-      const [h, m, rest] = parts;
-      const [s, ms] = rest.split('.');
-      return parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(s) + (ms ? parseInt(ms) / 1000 : 0);
-    } else if (parts.length === 2) {
-      const [m, rest] = parts;
-      const [s, ms] = rest.split('.');
-      return parseInt(m) * 60 + parseInt(s) + (ms ? parseInt(ms) / 1000 : 0);
-    }
-    return 0;
-  }
-
-  useEffect(() => {
-    if (!activeSubtitle || !subtitleEnabled) {
-      setCues([]);
-      setCurrentText('');
-      return;
-    }
-    fetch(activeSubtitle.filePath)
-      .then((res) => res.text())
-      .then((text) => setCues(parseVTT(text)))
-      .catch(() => setCues([]));
-  }, [activeSubtitle, subtitleEnabled, parseVTT]);
-
-  useEffect(() => {
-    if (cues.length === 0 || !subtitleEnabled) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      setCurrentText('');
-      return;
-    }
-    startTimeRef.current = Date.now();
-    setElapsedTime(0);
-    timerRef.current = setInterval(() => {
-      const now = (Date.now() - startTimeRef.current) / 1000;
-      setElapsedTime(now);
-      const activeCue = cues.find((c) => now >= c.startTime && now <= c.endTime);
-      setCurrentText(activeCue ? activeCue.text : '');
-    }, 250);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [cues, subtitleEnabled]);
-
-  useEffect(() => {
-    startTimeRef.current = Date.now();
-    setElapsedTime(0);
-  }, [activeServer]);
 
   if (servers.length === 0) {
     return (
@@ -154,23 +66,9 @@ export default function ServerSwitcher({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="watch-switcher space-y-4">
       {activeServer ? (
-        <PlayerFrame src={activeServer.embedUrl} title={`مشغل ${activeServer.name}`}>
-          {activeSubtitle && subtitleEnabled && currentText && (
-            <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none z-10">
-              <span className="inline-block bg-black/80 text-white text-lg md:text-xl px-5 py-2.5 rounded-lg shadow-lg backdrop-blur-sm">
-                {currentText}
-              </span>
-            </div>
-          )}
-          <div className="absolute top-3 right-3 z-10 pointer-events-none">
-            <div className="glass rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span>مباشر</span>
-            </div>
-          </div>
-        </PlayerFrame>
+        <PlayerFrame src={activeServer.embedUrl} title={`مشغل ${activeServer.name}`} watchInfo={watchInfo} blockPopups={activeServer.id === 'cinesrc' && blockPopups} />
       ) : (
         <div className="relative rounded-2xl overflow-hidden bg-black border border-neutral-800/50 shadow-2xl shadow-black/50">
           <div className="aspect-video relative flex items-center justify-center">
@@ -179,53 +77,17 @@ export default function ServerSwitcher({
         </div>
       )}
 
-      {subtitles.length > 0 && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <button
-            onClick={() => setSubtitleEnabled(!subtitleEnabled)}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
-              subtitleEnabled
-                ? 'bg-green-600/20 text-green-400 border border-green-500/30'
-                : 'glass text-neutral-400 hover:text-white'
-            }`}
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z" />
-            </svg>
-            CC
-          </button>
-          <select
-            value={activeSubtitle?.id || ''}
-            onChange={(e) => {
-              const id = parseInt(e.target.value);
-              const sub = subtitles.find((s) => s.id === id) || null;
-              setActiveSubtitle(sub);
-              if (sub) setSubtitleEnabled(true);
-            }}
-            className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-          >
-            <option value="" className="bg-neutral-900">بدون ترجمة</option>
-            {subtitles.map((sub) => (
-              <option key={sub.id} value={sub.id} className="bg-neutral-900">{sub.label}</option>
-            ))}
-          </select>
-          {subtitleEnabled && cues.length > 0 && (
-            <span className="text-xs text-neutral-600 font-mono">
-              {Math.floor(elapsedTime / 60).toString().padStart(2, '0')}:{Math.floor(elapsedTime % 60).toString().padStart(2, '0')}
-            </span>
-          )}
-        </div>
-      )}
 
       {/* خوادم المشاهدة */}
       {servers.length > 1 && (
-        <div className="flex items-center gap-2 flex-wrap pt-1">
+        <div className="watch-server-list flex items-center gap-2 flex-wrap pt-1">
           <span className="text-xs text-neutral-400 font-medium ml-2">السيرفر:</span>
           {servers.map((server) => (
             <button
               key={server.id}
+              type="button"
               onClick={() => setActiveServer(server)}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all ${
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all ${
                 activeServer?.id === server.id
                   ? 'bg-red-600 text-white shadow-lg shadow-red-900/30 ring-1 ring-red-400'
                   : 'bg-neutral-900/80 text-neutral-300 hover:text-white hover:bg-neutral-800 border border-neutral-800'
@@ -237,7 +99,21 @@ export default function ServerSwitcher({
         </div>
       )}
 
-      {/* خيارات وتنبيهات الترجمة الذكية */}
+      {activeServer?.id === 'cinesrc' && <button
+        type="button"
+        onClick={() => setBlockPopups((current) => !current)}
+        aria-pressed={blockPopups}
+        title="إذا لم يعمل المشغل، أوقف منع النوافذ المنبثقة وجرب مرة أخرى"
+        className={`rounded-xl border px-3.5 py-2 text-xs sm:text-sm font-medium transition-colors ${
+          blockPopups
+            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+            : 'border-neutral-700 bg-neutral-900/80 text-neutral-300 hover:bg-neutral-800'
+        }`}
+      >
+        منع النوافذ المنبثقة: {blockPopups ? 'مفعّل' : 'متوقف'}
+      </button>}
+
+      {/* توفر ملف الترجمة للتحميل */}
       {tmdbId && (
         <div className="glass rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs border border-neutral-800/80">
           <div className="flex items-center gap-2 flex-wrap">
@@ -250,24 +126,20 @@ export default function ServerSwitcher({
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="flex items-center gap-1.5 text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  {activeServer?.id === 'vidfast'
-                    ? 'ترجمة عربية مدمجة تلقائياً (?sub=ar)'
-                    : activeServer?.id === 'superembed'
-                    ? 'ترجمة عربية مدمجة (SuperEmbed)'
-                    : 'الترجمة العربية متوفرة ومدمجة'}
+                  ملف ترجمة عربية متوفر
                 </span>
                 <span className="text-neutral-300">
-                  (إذا لم تظهر تلقائياً، اضغط على أيقونة <span className="bg-white/10 text-white font-bold px-1.5 py-0.5 rounded">CC 💬</span> داخل شريط تحكم الفيديو)
+                  يمكن تحميله من هنا، أو استخدام الترجمة داخل المشغل إن توفرت.
                 </span>
               </div>
             ) : (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="flex items-center gap-1.5 text-amber-400 font-medium bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">
                   <span>⚠️</span>
-                  لا تتوفر ترجمة عربية رسمية لهذا العمل حتى الآن
+                  لم نجد ملف ترجمة عربية لهذا العمل حاليًا
                 </span>
                 <span className="text-neutral-500 text-[11px]">
-                  (العمل جديد جداً ولم يتم طرح ملف ترجمته العربية في قواعد البيانات بعد)
+                  قد تتوفر ترجمة داخل المشغل نفسه.
                 </span>
               </div>
             )}
