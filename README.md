@@ -11,6 +11,7 @@ A movie and TV discovery site built with Next.js, TypeScript, and TMDB. Titles a
 - TV details with cast and a season picker. Only the selected season's episodes load when opening a series.
 - Multiple embedded player sources, subtitle lookup, and SRT download where available.
 - Continue Watching, playback progress, My List, and appearance themes stored in the browser.
+- A `/guide` page with a silent subtitle walkthrough, plus an optional first-visit Brave recommendation with iPhone/iPad and Windows download links. Visitors can hide the recommendation permanently in their browser.
 - A direct `/admin` page for visitor and watching statistics; it has no public navigation link.
 - Responsive layouts for phones, tablets, and desktops.
 

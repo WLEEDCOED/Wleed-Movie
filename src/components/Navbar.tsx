@@ -11,6 +11,7 @@ const links = [
   { href: '/movies', label: 'Movies', icon: '▧' },
   { href: '/series', label: 'Shows', icon: '▣' },
   { href: '/lists', label: 'My List', icon: '▱' },
+  { href: '/guide', label: 'Guide', icon: 'ⓘ' },
 ];
 
 export default function Navbar() {
