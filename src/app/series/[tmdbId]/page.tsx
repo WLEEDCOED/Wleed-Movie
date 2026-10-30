@@ -4,17 +4,12 @@ import Link from 'next/link';
 import WatchlistButton from '@/components/WatchlistButton';
 import MovieHeroImage from '@/components/MovieHeroImage';
 import SeriesEpisodes from '@/components/SeriesEpisodes';
-import { resolveEpisodeAirDate } from '@/lib/episode-dates';
+import { episodeDateStatus, resolveEpisodeAirDate, riyadhToday } from '@/lib/episode-dates';
 import type { Metadata } from 'next';
 import type { TMDBTrending } from '@/lib/tmdb';
 import { Suspense } from 'react';
 
 interface PageProps { params: Promise<{ tmdbId: string }>; searchParams: Promise<{ season?: string }> }
-function riyadhToday(): string {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
-  const value = (type: string) => parts.find(part => part.type === type)?.value || '';
-  return `${value('year')}-${value('month')}-${value('day')}`;
-}
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { tmdbId } = await params;
   try { const series = await getSeriesDetail(Number(tmdbId)); return { title: `${series.name} | WleedMovie`, description: series.overview }; }
@@ -38,7 +33,7 @@ export default async function SeriesDetailPage({ params, searchParams }: PagePro
   const item: TMDBTrending = { id: series.id, media_type: 'tv', name: series.name, overview: series.overview, poster_path: series.poster_path, backdrop_path: series.backdrop_path, vote_average: series.vote_average, first_air_date: series.first_air_date, genre_ids: series.genres.map(genre => genre.id) };
   const backdrop = getImageUrl(series.backdrop_path, 'w1280');
   const titleLogo = getImageUrl(series.images?.logos?.find(logo => logo.iso_639_1 === 'en')?.file_path || null, 'w500');
-  const firstEpisode = episodes.find(episode => !episode.air_date || episode.air_date <= today);
+  const firstEpisode = episodes.find(episode => ['released', 'unknown'].includes(episodeDateStatus(episode.air_date, today)));
   return <div className="detail-page">
     <section className="detail-hero" style={backdrop ? { backgroundImage: `url(${backdrop})` } : undefined}>
       <div className="detail-shade" />

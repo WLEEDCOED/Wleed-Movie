@@ -192,7 +192,8 @@ a { color: inherit; text-decoration: none; }
 .series-episode-row:hover { background: rgba(var(--accent-rgb), .055); border-color: rgba(var(--accent-rgb), .12); }
 .series-episode-row.is-new { background: rgba(var(--accent-rgb), .075); border-color: rgba(var(--accent-rgb), .11); }
 .series-episode-row.is-upcoming { opacity: .54; }
-.series-episode-row.is-upcoming:hover { background: transparent; border-color: transparent; }
+.series-episode-row.is-upcoming:not(.is-checkable):hover { background: transparent; border-color: transparent; }
+.series-episode-row.is-checkable { opacity: .9; }
 .series-episode-thumb { position: relative; display: grid; place-items: center; width: 184px; aspect-ratio: 16/9; overflow: hidden; border-radius: 10px; background: var(--surface-strong); color: #a6a6ae; font-size: 12px; font-weight: 700; }
 .series-episode-still { width: 100%; height: 100%; object-fit: cover; }
 .series-episode-thumb .movie-image-fallback { display: grid; place-items: center; }

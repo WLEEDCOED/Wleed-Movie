@@ -6,6 +6,7 @@ import Link from 'next/link';
 import MovieHeroImage from './MovieHeroImage';
 import type { TMDBEpisode, TMDBSeason } from '@/lib/tmdb';
 import { getImageUrl } from '@/lib/tmdb';
+import { episodeDateStatus, riyadhToday } from '@/lib/episode-dates';
 import { getWatchHistory, WATCH_HISTORY_EVENT } from '@/lib/watch-history';
 import {
   EPISODE_PROGRESS_EVENT,
@@ -24,7 +25,7 @@ interface SeriesEpisodesProps {
 }
 
 function formatDate(date: string | null): string {
-  if (!date) return 'Release date unavailable';
+  if (!date || episodeDateStatus(date, date) === 'unknown') return 'Release date unavailable';
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
     .format(new Date(`${date}T12:00:00Z`));
 }
@@ -38,6 +39,20 @@ function formatPosition(seconds: number): string {
 export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, episodes, today }: SeriesEpisodesProps) {
   const router = useRouter();
   const [progress, setProgress] = useState<Record<string, EpisodeProgress>>({});
+  const [currentDate, setCurrentDate] = useState(today);
+
+  useEffect(() => {
+    const refreshDate = () => setCurrentDate(riyadhToday());
+    refreshDate();
+    const interval = window.setInterval(refreshDate, 60_000);
+    window.addEventListener('focus', refreshDate);
+    document.addEventListener('visibilitychange', refreshDate);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshDate);
+      document.removeEventListener('visibilitychange', refreshDate);
+    };
+  }, []);
 
   useEffect(() => {
     const refresh = () => {
@@ -70,7 +85,8 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
 
   const availableEpisodes = episodes.filter(episode => {
     const state = progress[episodeProgressId(seriesId, selectedSeason, episode.episode_number)];
-    return !episode.air_date || episode.air_date <= today || Boolean(state?.watched || (state?.positionSeconds ?? 0) >= 5);
+    const status = episodeDateStatus(episode.air_date, currentDate, Boolean(state?.watched || (state?.positionSeconds ?? 0) >= 5));
+    return status === 'released' || status === 'unknown';
   });
   const watchedCount = availableEpisodes.filter(episode => progress[episodeProgressId(seriesId, selectedSeason, episode.episode_number)]?.watched).length;
   const allWatched = availableEpisodes.length > 0 && watchedCount === availableEpisodes.length;
@@ -102,9 +118,11 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
       {episodes.map(episode => {
         const state = progress[episodeProgressId(seriesId, selectedSeason, episode.episode_number)];
         const hasPlayed = Boolean(state?.watched || (state?.positionSeconds ?? 0) >= 5);
-        const upcoming = Boolean(episode.air_date && episode.air_date > today && !hasPlayed);
+        const dateStatus = episodeDateStatus(episode.air_date, currentDate, hasPlayed);
+        const upcoming = dateStatus === 'upcoming' || dateStatus === 'check';
+        const isCheckable = dateStatus === 'check';
         const daysSinceAir = episode.air_date
-          ? Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${episode.air_date}T00:00:00Z`)) / 86400000)
+          ? Math.round((Date.parse(`${currentDate}T00:00:00Z`) - Date.parse(`${episode.air_date}T00:00:00Z`)) / 86400000)
           : Infinity;
         const watched = !upcoming && Boolean(state?.watched);
         const inProgress = !upcoming && !watched && Boolean(state?.positionSeconds && state.positionSeconds >= 5);
@@ -115,8 +133,8 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
           ? Math.min(100, state.positionSeconds / state.durationSeconds * 100)
           : 0;
 
-        return <article key={episode.id} className={`series-episode-row${upcoming ? ' is-upcoming' : ''}${isNew ? ' is-new' : ''}${watched ? ' is-watched' : ''}`}>
-          {upcoming ? <div className="series-episode-thumb series-episode-upcoming-art" aria-label={`Available ${formatDate(episode.air_date)}`}>
+        return <article key={episode.id} className={`series-episode-row${upcoming ? ' is-upcoming' : ''}${isCheckable ? ' is-checkable' : ''}${isNew ? ' is-new' : ''}${watched ? ' is-watched' : ''}`}>
+          {upcoming ? <div className="series-episode-thumb series-episode-upcoming-art" aria-label={`Scheduled ${formatDate(episode.air_date)}`}>
             <span>{formatDate(episode.air_date)}</span>
           </div> : <Link href={href} className="series-episode-thumb" aria-label={`Play episode ${episode.episode_number}: ${episode.name}`}>
             <MovieHeroImage src={still} alt={episode.name} fallback={`Episode ${episode.episode_number}`} className="series-episode-still" width={300} height={169} />
@@ -134,6 +152,7 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
             <div className="series-episode-meta">
               <span>{formatDate(episode.air_date)}</span>
               {!upcoming && episode.vote_average > 0 && <span className="series-episode-rating">★ {episode.vote_average.toFixed(1)}</span>}
+              {isCheckable && <Link href={href} className="series-episode-continue" aria-label={`Check playback for episode ${episode.episode_number}: ${episode.name}`}>Check availability →</Link>}
               {inProgress && <Link href={href} className="series-episode-continue">Continue · {formatPosition(state!.positionSeconds)}</Link>}
               {watched && <span className="series-episode-watched-label">Watched</span>}
             </div>
@@ -144,7 +163,7 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
           </div>
 
           <div className="series-episode-trailing">
-            {upcoming ? <span className="series-episode-soon">SOON</span> : <button
+            {upcoming ? <span className="series-episode-soon">{isCheckable ? 'CHECK' : 'SOON'}</span> : <button
               type="button"
               className="series-episode-check"
               aria-label={watched ? `Unmark episode ${episode.episode_number} as watched` : `Mark episode ${episode.episode_number} as watched`}
