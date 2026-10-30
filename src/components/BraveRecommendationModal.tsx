@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 const DISMISSED_KEY = 'wleedmovie-brave-guide-dismissed-v1';
 
@@ -64,7 +65,7 @@ export default function BraveRecommendationModal() {
   return <div className="brave-prompt-overlay" onMouseDown={event => { if (event.target === event.currentTarget) dismiss(); }}>
     <section ref={dialog} className="brave-prompt" role="dialog" aria-modal="true" aria-labelledby="brave-prompt-title" aria-describedby="brave-prompt-description" dir="rtl">
       <button ref={closeButton} className="brave-prompt-close" type="button" aria-label="إغلاق الرسالة" onClick={dismiss}>×</button>
-      <div className="brave-prompt-badge" aria-hidden="true">✦</div>
+      <div className="brave-prompt-brand"><Image src="/brave-logo.png" width={779} height={242} alt="شعار متصفح Brave" priority /></div>
       <p className="brave-prompt-kicker">تجربة مشاهدة أفضل</p>
       <h2 id="brave-prompt-title">مرحبًا بك في WLEEDMOVIE</h2>
       <p id="brave-prompt-description" className="brave-prompt-description">ننصحك باستخدام متصفح Brave لتقليل الإعلانات والنوافذ المنبثقة من مشغلات الفيديو الخارجية. وتجد في دليلنا شرحًا لاختيار الترجمة وتحميلها وضبط توقيتها.</p>

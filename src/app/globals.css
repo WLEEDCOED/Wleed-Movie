@@ -657,7 +657,8 @@ html[data-spoiler-free="on"] .episode-card h3::after { content: 'Episode details
 .brave-prompt { position: relative; width: min(100%, 540px); max-height: min(90vh, 760px); overflow-y: auto; padding: clamp(26px, 5vw, 42px); border: 1px solid rgba(var(--accent-rgb), .26); border-radius: 26px; background: linear-gradient(155deg, rgba(var(--accent-rgb), .09), var(--surface) 38%, var(--bg)); box-shadow: 0 32px 120px #000c; }
 .brave-prompt-close { position: absolute; inset: 18px auto auto 18px; width: 34px; height: 34px; border: 1px solid #ffffff27; border-radius: 50%; background: #ffffff0a; color: #d1d1d8; font-size: 25px; line-height: 1; }
 .brave-prompt-close:hover { background: #ffffff1c; color: #fff; }
-.brave-prompt-badge { display: grid; place-items: center; width: 50px; height: 50px; margin-bottom: 24px; border: 1px solid rgba(var(--accent-rgb), .32); border-radius: 15px; background: rgba(var(--accent-rgb), .13); color: var(--accent); font-size: 28px; }
+.brave-prompt-brand { display: flex; align-items: center; width: fit-content; max-width: 100%; min-height: 78px; margin-bottom: 22px; padding: 13px 17px; border: 1px solid rgba(var(--accent-rgb), .24); border-radius: 17px; background: #ffffff0b; }
+.brave-prompt-brand img { display: block; width: 184px; max-width: 100%; height: auto; }
 .brave-prompt-kicker { margin: 0 0 9px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .14em; }
 .brave-prompt h2 { margin: 0; font-size: clamp(24px, 5vw, 32px); line-height: 1.3; }
 .brave-prompt-description { margin: 15px 0 24px; color: #c5c5cd; font-size: 14px; line-height: 1.9; }
