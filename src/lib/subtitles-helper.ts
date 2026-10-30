@@ -7,6 +7,20 @@ export interface CachedSub {
   timestamp: number;
 }
 
+interface SubdlFile {
+  url?: string;
+  season?: number | null;
+  episode?: number | null;
+}
+
+interface SubdlSubtitle {
+  url?: string;
+  season?: number | null;
+  episode?: number | null;
+  full_season?: boolean;
+  unpack_files?: SubdlFile[];
+}
+
 const cache = new Map<string, CachedSub>();
 const CACHE_TTL = 1000 * 60 * 60 * 24; // Keep available subtitles for 24 hours.
 const MISSING_CACHE_TTL = 1000 * 60 * 5; // Check newly released subtitles again after 5 minutes.
@@ -68,7 +82,7 @@ export async function fetchArabicSubtitle(
   }
 
   try {
-    let subdlUrl = `https://api.subdl.com/api/v1/subtitles?api_key=${SUBDL_API_KEY}&tmdb_id=${tmdbId}&type=${type}&languages=ar`;
+    let subdlUrl = `https://api.subdl.com/api/v1/subtitles?api_key=${SUBDL_API_KEY}&tmdb_id=${tmdbId}&type=${type}&languages=ar&unpack=1`;
     if (type === 'tv') {
       subdlUrl += `&season_number=${season}&episode_number=${episode}`;
     }
@@ -77,16 +91,24 @@ export async function fetchArabicSubtitle(
     const res = await fetch(subdlUrl, fetchOptions);
     const data = await res.json();
 
-    let subtitles = data.subtitles || [];
+    let subtitles: SubdlSubtitle[] = data.subtitles || [];
 
-    // Fallback for TV full season packs
+    // A season-only search can find packs, but results for other episodes must never be used.
     if (type === 'tv' && subtitles.length === 0) {
-      const fallbackRes = await fetch(`https://api.subdl.com/api/v1/subtitles?api_key=${SUBDL_API_KEY}&tmdb_id=${tmdbId}&type=tv&languages=ar`, fetchOptions);
+      const fallbackRes = await fetch(`https://api.subdl.com/api/v1/subtitles?api_key=${SUBDL_API_KEY}&tmdb_id=${tmdbId}&type=tv&languages=ar&season_number=${season}&unpack=1&subs_per_page=30`, fetchOptions);
       const fallbackData = await fallbackRes.json();
       subtitles = fallbackData.subtitles || [];
     }
 
-    if (subtitles.length === 0) {
+    const selectedSub = type === 'tv'
+      ? subtitles.find((sub) => !sub.full_season && Number(sub.season) === season && Number(sub.episode) === episode)
+        || subtitles.find((sub) => sub.full_season && sub.unpack_files?.some((file) => Number(file.season) === season && Number(file.episode) === episode && file.url))
+      : subtitles[0];
+    const selectedFile = selectedSub?.full_season
+      ? selectedSub.unpack_files?.find((file) => Number(file.season) === season && Number(file.episode) === episode && file.url)
+      : null;
+
+    if (!selectedSub || !(selectedFile?.url || selectedSub.url)) {
       const emptyResult: CachedSub = {
         vtt: '',
         srt: '',
@@ -97,23 +119,23 @@ export async function fetchArabicSubtitle(
       return emptyResult;
     }
 
-    const selectedSub = subtitles[0];
-    const dlUrl = `https://dl.subdl.com${selectedSub.url}`;
+    const subtitleUrl = selectedFile?.url || selectedSub.url!;
+    const dlUrl = `https://dl.subdl.com${subtitleUrl}`;
 
     const dlRes = await fetch(dlUrl);
     if (!dlRes.ok) {
       throw new Error(`Failed to download subtitle zip: ${dlRes.status}`);
     }
 
-    const arrayBuf = await dlRes.arrayBuffer();
-    const zip = new AdmZip(Buffer.from(arrayBuf));
-    const entry = findBestEntry(zip.getEntries(), type === 'tv', season, episode);
-
-    if (!entry) {
-      throw new Error('No .srt entry found in zip');
+    let rawSrt: string;
+    if (/\.(srt|vtt)(?:\?|$)/i.test(subtitleUrl)) {
+      rawSrt = await dlRes.text();
+    } else {
+      const zip = new AdmZip(Buffer.from(await dlRes.arrayBuffer()));
+      const entry = findBestEntry(zip.getEntries(), type === 'tv', season, episode);
+      if (!entry) throw new Error('No .srt entry found in zip');
+      rawSrt = entry.getData().toString('utf-8');
     }
-
-    const rawSrt = entry.getData().toString('utf-8');
     const vtt = convertSrtToVtt(rawSrt);
 
     const result: CachedSub = {
