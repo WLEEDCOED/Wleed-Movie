@@ -8,7 +8,8 @@ export interface CachedSub {
 }
 
 const cache = new Map<string, CachedSub>();
-const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
+const CACHE_TTL = 1000 * 60 * 60 * 24; // Keep available subtitles for 24 hours.
+const MISSING_CACHE_TTL = 1000 * 60 * 5; // Check newly released subtitles again after 5 minutes.
 
 const SUBDL_API_KEY = process.env.SUBDL_API_KEY || '';
 
@@ -55,13 +56,14 @@ export async function fetchArabicSubtitle(
   tmdbId: number,
   type: 'movie' | 'tv' = 'movie',
   season = 1,
-  episode = 1
+  episode = 1,
+  forceRefresh = false
 ): Promise<CachedSub> {
   const cacheKey = `${type}-${tmdbId}-${type === 'tv' ? `${season}-${episode}` : ''}`;
   const now = Date.now();
 
   const cached = cache.get(cacheKey);
-  if (cached && now - cached.timestamp < CACHE_TTL) {
+  if (!forceRefresh && cached && now - cached.timestamp < (cached.hasSub ? CACHE_TTL : MISSING_CACHE_TTL)) {
     return cached;
   }
 
@@ -71,14 +73,15 @@ export async function fetchArabicSubtitle(
       subdlUrl += `&season_number=${season}&episode_number=${episode}`;
     }
 
-    const res = await fetch(subdlUrl, { next: { revalidate: 86400 } });
+    const fetchOptions = forceRefresh ? { cache: 'no-store' as const } : { next: { revalidate: 300 } };
+    const res = await fetch(subdlUrl, fetchOptions);
     const data = await res.json();
 
     let subtitles = data.subtitles || [];
 
     // Fallback for TV full season packs
     if (type === 'tv' && subtitles.length === 0) {
-      const fallbackRes = await fetch(`https://api.subdl.com/api/v1/subtitles?api_key=${SUBDL_API_KEY}&tmdb_id=${tmdbId}&type=tv&languages=ar`);
+      const fallbackRes = await fetch(`https://api.subdl.com/api/v1/subtitles?api_key=${SUBDL_API_KEY}&tmdb_id=${tmdbId}&type=tv&languages=ar`, fetchOptions);
       const fallbackData = await fallbackRes.json();
       subtitles = fallbackData.subtitles || [];
     }

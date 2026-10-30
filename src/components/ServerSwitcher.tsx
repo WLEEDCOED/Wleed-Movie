@@ -37,6 +37,7 @@ export default function ServerSwitcher({
   );
   const [blockPopups, setBlockPopups] = useState(true);
   const [availability, setAvailability] = useState<{ key: string; available: boolean } | null>(null);
+  const [checkingSubtitles, setCheckingSubtitles] = useState(false);
   const availabilityKey = `${mediaType}-${tmdbId ?? 0}-${season ?? 0}-${episode ?? 0}`;
   const subAvailable = availability?.key === availabilityKey ? availability.available : null;
 
@@ -44,12 +45,28 @@ export default function ServerSwitcher({
     if (!tmdbId) return;
     const controller = new AbortController();
     const checkUrl = `/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType || 'movie'}${season ? `&season=${season}&episode=${episode}` : ''}&check=true`;
-    fetch(checkUrl, { signal: controller.signal })
+    fetch(checkUrl, { signal: controller.signal, cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => setAvailability({ key: availabilityKey, available: !!data.hasSub }))
       .catch(() => { if (!controller.signal.aborted) setAvailability({ key: availabilityKey, available: false }); });
     return () => controller.abort();
   }, [tmdbId, mediaType, season, episode, availabilityKey]);
+
+  const recheckSubtitles = async () => {
+    if (!tmdbId || checkingSubtitles) return;
+    setCheckingSubtitles(true);
+    try {
+      const url = `/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType}${season ? `&season=${season}&episode=${episode}` : ''}&check=true&refresh=true`;
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Subtitle check failed');
+      const data = await response.json();
+      setAvailability({ key: availabilityKey, available: !!data.hasSub });
+    } catch {
+      setAvailability({ key: availabilityKey, available: false });
+    } finally {
+      setCheckingSubtitles(false);
+    }
+  };
 
 
   if (servers.length === 0) {
@@ -158,9 +175,14 @@ export default function ServerSwitcher({
               <span>📥 تحميل ملف الترجمة (SRT)</span>
             </a>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-neutral-900/40 text-neutral-500 border border-neutral-800/40 text-[11px] font-medium whitespace-nowrap self-start sm:self-auto opacity-70">
-              غير متوفرة للتحميل
-            </span>
+            <button
+              type="button"
+              onClick={recheckSubtitles}
+              disabled={checkingSubtitles}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-neutral-900 text-neutral-200 hover:bg-neutral-800 border border-neutral-700/60 text-[11px] font-medium whitespace-nowrap self-start sm:self-auto disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              {checkingSubtitles ? 'جاري إعادة الفحص...' : 'إعادة فحص الترجمة'}
+            </button>
           )}
         </div>
       )}

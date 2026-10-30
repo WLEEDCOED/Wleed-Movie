@@ -21,12 +21,13 @@ export async function GET(request: NextRequest) {
   const format = searchParams.get('format') === 'srt' ? 'srt' : 'vtt';
   const isDownload = searchParams.get('download') === 'true' || searchParams.get('download') === '1';
   const isCheck = searchParams.get('check') === 'true';
+  const forceRefresh = searchParams.get('refresh') === 'true' && isCheck;
 
   if (!tmdbId) {
     return NextResponse.json({ error: 'tmdbId is required' }, { status: 400 });
   }
 
-  const subData = await fetchArabicSubtitle(parseInt(tmdbId), type, season, episode);
+  const subData = await fetchArabicSubtitle(parseInt(tmdbId), type, season, episode, forceRefresh);
 
   if (isCheck) {
     return NextResponse.json(
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
       {
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Cache-Control': 'public, max-age=3600',
+          'Cache-Control': 'no-store',
         },
       }
     );
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'text/vtt; charset=utf-8',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Cache-Control': 'public, max-age=3600',
+        'Cache-Control': 'no-store',
       },
     });
   }
