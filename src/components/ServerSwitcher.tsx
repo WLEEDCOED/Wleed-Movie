@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import PlayerFrame from './PlayerFrame';
 import type { WatchInfo } from '@/lib/watch-history';
+import type { SubtitleCue } from '@/lib/auto-subtitles';
 
 interface Server {
   id: string;
@@ -38,8 +39,43 @@ export default function ServerSwitcher({
   const [blockPopups, setBlockPopups] = useState(true);
   const [availability, setAvailability] = useState<{ key: string; available: boolean } | null>(null);
   const [checkingSubtitles, setCheckingSubtitles] = useState(false);
+  const [autoEnabled, setAutoEnabled] = useState(false);
+  const [autoSubtitle, setAutoSubtitle] = useState<{ key: string; cues: SubtitleCue[] } | null>(null);
+  const [autoVisible, setAutoVisible] = useState(false);
+  const [autoBusy, setAutoBusy] = useState(false);
+  const [autoMessage, setAutoMessage] = useState('');
   const availabilityKey = `${mediaType}-${tmdbId ?? 0}-${season ?? 0}-${episode ?? 0}`;
+  const autoCues = autoSubtitle?.key === availabilityKey ? autoSubtitle.cues : null;
   const subAvailable = availability?.key === availabilityKey ? availability.available : null;
+  const overlaySupported = activeServer?.id === 'cinesrc' || activeServer?.id === 'vidrift';
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/subtitles/auto?check=true', { signal: controller.signal, cache: 'no-store' })
+      .then(response => response.json())
+      .then(data => setAutoEnabled(Boolean(data.enabled)))
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setAutoSubtitle(null);
+      setAutoVisible(false);
+      setAutoMessage('');
+      try {
+        const cached = localStorage.getItem(`wm:auto-subtitle:${availabilityKey}`);
+        if (!cached) return;
+        const cues = JSON.parse(cached) as SubtitleCue[];
+        if (Array.isArray(cues) && cues.length > 0 && cues.length <= 4000
+          && cues.every(cue => Number.isFinite(cue.start) && Number.isFinite(cue.end) && typeof cue.text === 'string')) {
+          setAutoSubtitle({ key: availabilityKey, cues });
+          setAutoVisible(true);
+        }
+      } catch { /* Browser storage may be disabled. */ }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [availabilityKey]);
 
   useEffect(() => {
     if (!tmdbId) return;
@@ -68,6 +104,47 @@ export default function ServerSwitcher({
     }
   };
 
+  const translateSubtitles = async () => {
+    if (!tmdbId || autoBusy) return;
+    if (autoCues) {
+      setAutoVisible(current => !current);
+      return;
+    }
+    setAutoBusy(true);
+    setAutoMessage('جاري البحث عن ملف ترجمة بلغة أخرى...');
+    try {
+      const query = new URLSearchParams({ tmdbId: String(tmdbId), type: mediaType });
+      if (mediaType === 'tv' && season && episode) {
+        query.set('season', String(season));
+        query.set('episode', String(episode));
+      }
+      const sourceResponse = await fetch(`/api/subtitles/auto?${query}`, { cache: 'no-store' });
+      const source = await sourceResponse.json() as { cues?: SubtitleCue[]; language?: string; error?: string };
+      if (!sourceResponse.ok || !source.cues?.length || !source.language) throw new Error(source.error || 'لم نجد ملف ترجمة مناسبًا.');
+
+      const translated: SubtitleCue[] = [];
+      for (let index = 0; index < source.cues.length; index += 25) {
+        const batch = source.cues.slice(index, index + 25);
+        setAutoMessage(`جاري ترجمة الترجمة العربية... ${Math.round(index / source.cues.length * 100)}%`);
+        const response = await fetch('/api/subtitles/auto', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source: source.language, lines: batch.map(cue => cue.text) }),
+        });
+        const data = await response.json() as { lines?: string[]; error?: string };
+        if (!response.ok || !data.lines || data.lines.length !== batch.length) throw new Error(data.error || 'تعذّرت الترجمة.');
+        translated.push(...batch.map((cue, offset) => ({ ...cue, text: data.lines![offset] })));
+      }
+      setAutoSubtitle({ key: availabilityKey, cues: translated });
+      setAutoVisible(true);
+      setAutoMessage('الترجمة العربية الآلية جاهزة. استخدم زر تكبير الموقع لإظهارها في الشاشة الكاملة.');
+      try { localStorage.setItem(`wm:auto-subtitle:${availabilityKey}`, JSON.stringify(translated)); } catch { /* Cache is optional. */ }
+    } catch (error) {
+      setAutoMessage(error instanceof Error ? error.message : 'تعذّرت الترجمة الآن.');
+    } finally {
+      setAutoBusy(false);
+    }
+  };
+
 
   if (servers.length === 0) {
     return (
@@ -85,7 +162,7 @@ export default function ServerSwitcher({
   return (
     <div className="watch-switcher space-y-4">
       {activeServer ? (
-        <PlayerFrame src={activeServer.embedUrl} title={`مشغل ${activeServer.name}`} watchInfo={watchInfo} blockPopups={activeServer.id === 'cinesrc' && blockPopups} />
+        <PlayerFrame src={activeServer.embedUrl} title={`مشغل ${activeServer.name}`} watchInfo={watchInfo} blockPopups={activeServer.id === 'cinesrc' && blockPopups} subtitleCues={overlaySupported && autoVisible ? autoCues : null} />
       ) : (
         <div className="relative rounded-2xl overflow-hidden bg-black border border-neutral-800/50 shadow-2xl shadow-black/50">
           <div className="aspect-video relative flex items-center justify-center">
@@ -131,7 +208,7 @@ export default function ServerSwitcher({
       </button>}
 
       {/* توفر ملف الترجمة للتحميل */}
-      {tmdbId && (
+      {tmdbId && (<>
         <div className="glass rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs border border-neutral-800/80">
           <div className="flex items-center gap-2 flex-wrap">
             {subAvailable === null ? (
@@ -185,7 +262,15 @@ export default function ServerSwitcher({
             </button>
           )}
         </div>
-      )}
+          {autoEnabled && subAvailable === false && <div className="auto-translate-actions">
+            <button type="button" onClick={translateSubtitles} disabled={autoBusy || !overlaySupported}
+              className="auto-translate-button" aria-pressed={Boolean(autoCues && autoVisible)}>
+              {autoBusy ? 'جاري الترجمة...' : autoCues ? (autoVisible ? 'إخفاء الترجمة الآلية' : 'إظهار الترجمة الآلية') : 'ترجمة آلية للعربية'}
+            </button>
+            {!overlaySupported && <span>لعرض الترجمة فوق الفيديو، اختر CineSrc أو Vidrift.</span>}
+            {autoMessage && <span role="status" dir="auto">{autoMessage}</span>}
+          </div>}
+      </>)}
     </div>
   );
 }

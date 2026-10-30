@@ -10,6 +10,7 @@ A movie and TV discovery site built with Next.js, TypeScript, and TMDB. Titles a
 - Movie details with cast, ratings, production information, and a watch section.
 - TV details with cast and a season picker. Only the selected season's episodes load when opening a series.
 - Multiple embedded player sources, subtitle lookup, and SRT download where available.
+- Optional on-demand Arabic translation of English, Spanish, or Turkish subtitle files using a self-hosted LibreTranslate service. The site overlays translations on CineSrc and Vidrift when those players report playback time.
 - Continue Watching, playback progress, My List, and appearance themes stored in the browser.
 - A direct `/admin` page for visitor and watching statistics; it has no public navigation link.
 - Responsive layouts for phones, tablets, and desktops.
@@ -34,6 +35,9 @@ Use `npm run build` to check the production build and `npm run start` to serve t
 | `TMDB_API_KEY` | Required for the catalog and title details. |
 | `SUBDL_API_KEY` | Optional subtitle search and download. |
 | `OPENSUBTITLES_API_KEY` | Optional fallback subtitle provider. |
+| `AUTO_TRANSLATE_ENABLED` | Set to `true` only when the external translator is ready; `false` removes the button without changing playback. |
+| `LIBRETRANSLATE_URL` | HTTPS base URL of a self-hosted LibreTranslate instance. |
+| `LIBRETRANSLATE_API_KEY` | Optional API key issued by the self-hosted translator. |
 | `DATABASE_URL` | SQLite connection used by the Prisma subtitle tables, for example `file:./dev.db`. |
 | `ADMIN_PASSWORD_HASH` | Admin password hash in `salt:hash` format (16-byte hex salt, 32-byte scrypt hash). |
 | `ADMIN_SESSION_SECRET` | Secret used to sign admin sessions. |
@@ -51,4 +55,5 @@ The production site is hosted on Vercel. Add the required environment variables 
 - Provider discovery currently uses the US region. Availability can differ in other countries.
 - My List and Continue Watching are saved in each browser's local storage and do not sync across devices.
 - Embedded players are operated by third parties. Their content availability, advertisements, playback controls, and subtitle menus can change independently of this site.
+- Automatic translation requires a timed subtitle file in another language and a reachable LibreTranslate service. It cannot extract audio from third-party embeds. Translations are cached in the viewer's browser and may not match a different video cut. Use the site's fullscreen button to keep the subtitle overlay visible.
 - Admin activity counts visitors seen in the last 90 seconds. "Watching now" means the player is visible; embedded providers do not always expose a reliable play event.

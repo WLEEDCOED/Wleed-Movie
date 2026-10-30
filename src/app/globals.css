@@ -679,6 +679,14 @@ html[data-detail-view="compact"] .movie-detail-page .movie-hero-copy { width: mi
 /* Watch pages start below the fixed header, including on iPad in landscape. */
 .watch-page { padding-top: calc(118px + env(safe-area-inset-top)); }
 .player-frame-fullscreen .player-expand-button { min-height: 44px; touch-action: none; }
+.player-auto-subtitle { position: absolute; z-index: 15; left: 6%; right: 6%; bottom: 11%; pointer-events: none; white-space: pre-line; text-align: center; color: #fff; font-size: clamp(16px, 2.2vw, 29px); font-weight: 700; line-height: 1.5; text-shadow: 0 2px 5px #000, 0 0 12px #000, 0 0 20px #000; }
+.player-frame-fullscreen .player-auto-subtitle { bottom: max(9%, env(safe-area-inset-bottom)); }
+.auto-translate-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; border: 1px solid rgba(var(--accent-rgb), .24); border-radius: 12px; padding: 12px; background: rgba(var(--accent-rgb), .055); color: #c9c9d0; font-size: 12px; }
+.auto-translate-button { min-height: 42px; border-radius: 9px; padding: 8px 15px; background: var(--accent); color: var(--accent-ink); font-weight: 800; }
+.auto-translate-button:hover { filter: brightness(1.08); }
+.auto-translate-button:disabled { opacity: .5; cursor: not-allowed; }
+.auto-translate-button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.auto-translate-actions [role="status"] { flex-basis: 100%; }
 /* WebKit can keep an embedded player's old dimensions after the wrapper enters fullscreen. */
 .player-frame:fullscreen { width: 100vw !important; height: 100vh !important; max-width: none !important; margin: 0 !important; border: 0; border-radius: 0; }
 .player-frame:-webkit-full-screen { width: 100vw !important; height: 100vh !important; max-width: none !important; margin: 0 !important; border: 0; border-radius: 0; }

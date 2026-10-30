@@ -13,6 +13,7 @@ import {
 import { addVisibleWatchTime, getResumePosition, recordWatchVisit, saveWatchPosition, type WatchInfo } from '@/lib/watch-history';
 import { saveEpisodePosition, setEpisodesWatched } from '@/lib/episode-progress';
 import { PLAYER_PRESENCE_EVENT } from '@/lib/analytics-events';
+import { activeSubtitle, type SubtitleCue } from '@/lib/auto-subtitles';
 
 /** Vendors still ship prefixed versions of the Fullscreen API (Safari, old Edge). */
 type FullscreenElement = HTMLDivElement & {
@@ -53,6 +54,7 @@ interface PlayerFrameProps {
   children?: ReactNode;
   watchInfo?: WatchInfo;
   blockPopups?: boolean;
+  subtitleCues?: SubtitleCue[] | null;
 }
 
 /**
@@ -65,7 +67,7 @@ interface PlayerFrameProps {
  *    expansion: the frame fills the viewport, the page is locked and the site
  *    chrome is hidden. The iframe is never re-parented, so playback continues.
  */
-export default function PlayerFrame({ src, title, children, watchInfo, blockPopups = false }: PlayerFrameProps) {
+export default function PlayerFrame({ src, title, children, watchInfo, blockPopups = false, subtitleCues }: PlayerFrameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const swipeStartYRef = useRef<number | null>(null);
@@ -75,6 +77,7 @@ export default function PlayerFrame({ src, title, children, watchInfo, blockPopu
   const hasHydrated = useSyncExternalStore(noSubscription, clientSnapshot, serverSnapshot);
   const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [subtitleDisplay, setSubtitleDisplay] = useState<{ source: string; cues: SubtitleCue[] | null; text: string }>({ source: '', cues: null, text: '' });
 
   // True while the player is enlarged, either through the real Fullscreen API or
   // through the CSS fallback. The frame then fills all available space and the
@@ -129,6 +132,11 @@ export default function PlayerFrame({ src, title, children, watchInfo, blockPopu
         return;
       }
       if (typeof position !== 'number' || !Number.isFinite(position) || position < 0) return;
+      if (subtitleCues?.length) {
+        const text = activeSubtitle(subtitleCues, position);
+        setSubtitleDisplay(current => current.source === src && current.cues === subtitleCues && current.text === text
+          ? current : { source: src, cues: subtitleCues, text });
+      }
       const now = Date.now();
       const last = lastPositionRef.current;
       if (type !== 'cinesrc:seeked' && type !== 'cinesrc:response' && type !== 'vidrift:paused' && now - last.savedAt < 2000 && Math.abs(position - last.seconds) < 10) return;
@@ -141,7 +149,7 @@ export default function PlayerFrame({ src, title, children, watchInfo, blockPopu
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [frame?.source, src, watchInfo]);
+  }, [frame?.source, src, watchInfo, subtitleCues]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -359,6 +367,8 @@ export default function PlayerFrame({ src, title, children, watchInfo, blockPopu
         />}
 
         {children}
+
+        {subtitleCues?.length && subtitleDisplay.source === src && subtitleDisplay.cues === subtitleCues && subtitleDisplay.text && <div className="player-auto-subtitle" dir="rtl" aria-live="off">{subtitleDisplay.text}</div>}
 
       </div>
 
