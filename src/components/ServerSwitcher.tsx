@@ -51,13 +51,29 @@ export default function ServerSwitcher({
       freshOnContinue = sessionStorage.getItem('refresh-subtitles-on-continue') === continueKey;
       if (freshOnContinue) sessionStorage.removeItem('refresh-subtitles-on-continue');
     } catch { /* Storage may be disabled. */ }
+    const refreshTimer = freshOnContinue
+      ? window.setTimeout(() => setAtlanticRefreshKey(key => key + 1), 0)
+      : null;
     const checkUrl = `/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType}${season ? `&season=${season}&episode=${episode}` : ''}&check=true${freshOnContinue ? '&refresh=true' : ''}`;
     fetch(checkUrl, { signal: controller.signal, cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => setAvailability({ key: availabilityKey, available: !!data.hasSub }))
       .catch(() => { if (!controller.signal.aborted) setAvailability({ key: availabilityKey, available: false }); });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+    };
   }, [tmdbId, mediaType, season, episode, availabilityKey]);
+
+  useEffect(() => {
+    const refreshRestoredPlayer = (event: PageTransitionEvent) => {
+      if (event.persisted && activeServer?.id === 'atlantic') {
+        setAtlanticRefreshKey(key => key + 1);
+      }
+    };
+    window.addEventListener('pageshow', refreshRestoredPlayer);
+    return () => window.removeEventListener('pageshow', refreshRestoredPlayer);
+  }, [activeServer?.id]);
 
   const recheckSubtitles = async () => {
     if (!tmdbId || checkingSubtitles) return;
@@ -122,14 +138,6 @@ export default function ServerSwitcher({
           ))}
         </div>
       )}
-
-      {activeServer?.id === 'atlantic' && <div className="atlantic-subtitle-help">
-        <button type="button" onClick={() => setAtlanticRefreshKey(key => key + 1)}>
-          ↻ Reload Atlantic player
-        </button>
-        <span>Reloads playback to check for new subtitles. In Captions, choose Auto select if Off was saved earlier.</span>
-        {tmdbId && <a href={mediaType === 'tv' ? `https://atlantic.st/watch/${tmdbId}/${season}/${episode}` : activeServer.embedUrl} target="_blank" rel="noopener noreferrer">Open directly in Atlantic ↗</a>}
-      </div>}
 
       {activeServer?.id === 'cinesrc' && <button
         type="button"
