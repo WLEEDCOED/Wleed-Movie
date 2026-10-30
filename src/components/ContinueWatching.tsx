@@ -40,7 +40,9 @@ export default function ContinueWatching() {
     <div className="rail-heading"><h2>Continue Watching</h2></div>
     <div className="continue-track">
       {entries.map(entry => <article className="continue-card" key={`${entry.mediaType}-${entry.mediaId}`}>
-        <Link href={entry.href} className="continue-link" aria-label={`Continue ${entry.title}${entry.season ? `, season ${entry.season} episode ${entry.episode}` : ''}`}>
+        <Link href={entry.href} onClick={() => {
+          try { sessionStorage.setItem('refresh-subtitles-on-continue', `${entry.mediaType}-${entry.mediaId}-${entry.season ?? 0}-${entry.episode ?? 0}`); } catch { /* Storage may be disabled. */ }
+        }} className="continue-link" aria-label={`Continue ${entry.title}${entry.season ? `, season ${entry.season} episode ${entry.episode}` : ''}`}>
           <div className="continue-image">
             {entry.imageUrl ? <Image src={entry.imageUrl} alt="" fill sizes="(max-width: 740px) 250px, 290px" /> : <span className="continue-fallback">{entry.title.charAt(0)}</span>}
             {progressPercent(entry) !== null && <span className="continue-progress"><span style={{ width: `${progressPercent(entry)}%` }} /></span>}

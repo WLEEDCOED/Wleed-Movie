@@ -53,6 +53,7 @@ interface PlayerFrameProps {
   children?: ReactNode;
   watchInfo?: WatchInfo;
   blockPopups?: boolean;
+  refreshKey?: number;
 }
 
 /**
@@ -65,7 +66,7 @@ interface PlayerFrameProps {
  *    expansion: the frame fills the viewport, the page is locked and the site
  *    chrome is hidden. The iframe is never re-parented, so playback continues.
  */
-export default function PlayerFrame({ src, title, children, watchInfo, blockPopups = false }: PlayerFrameProps) {
+export default function PlayerFrame({ src, title, children, watchInfo, blockPopups = false, refreshKey = 0 }: PlayerFrameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const swipeStartYRef = useRef<number | null>(null);
@@ -343,7 +344,7 @@ export default function PlayerFrame({ src, title, children, watchInfo, blockPopu
       <div className={isFullscreen ? 'player-viewport relative w-full h-full' : 'player-viewport relative aspect-video'}>
         {activeFrame && <iframe
           ref={iframeRef}
-          key={`${activeFrame.url}-${blockPopups}`}
+          key={`${activeFrame.url}-${blockPopups}-${refreshKey}`}
           src={activeFrame.url}
           title={title}
           className="w-full h-full"

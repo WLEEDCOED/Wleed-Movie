@@ -36,6 +36,7 @@ export default function ServerSwitcher({
     defaultServer
   );
   const [blockPopups, setBlockPopups] = useState(true);
+  const [atlanticRefreshKey, setAtlanticRefreshKey] = useState(0);
   const [availability, setAvailability] = useState<{ key: string; available: boolean } | null>(null);
   const [checkingSubtitles, setCheckingSubtitles] = useState(false);
   const availabilityKey = `${mediaType}-${tmdbId ?? 0}-${season ?? 0}-${episode ?? 0}`;
@@ -44,7 +45,13 @@ export default function ServerSwitcher({
   useEffect(() => {
     if (!tmdbId) return;
     const controller = new AbortController();
-    const checkUrl = `/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType || 'movie'}${season ? `&season=${season}&episode=${episode}` : ''}&check=true`;
+    const continueKey = `${mediaType}-${tmdbId}-${season ?? 0}-${episode ?? 0}`;
+    let freshOnContinue = false;
+    try {
+      freshOnContinue = sessionStorage.getItem('refresh-subtitles-on-continue') === continueKey;
+      if (freshOnContinue) sessionStorage.removeItem('refresh-subtitles-on-continue');
+    } catch { /* Storage may be disabled. */ }
+    const checkUrl = `/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType}${season ? `&season=${season}&episode=${episode}` : ''}&check=true${freshOnContinue ? '&refresh=true' : ''}`;
     fetch(checkUrl, { signal: controller.signal, cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => setAvailability({ key: availabilityKey, available: !!data.hasSub }))
@@ -85,7 +92,7 @@ export default function ServerSwitcher({
   return (
     <div className="watch-switcher space-y-4">
       {activeServer ? (
-        <PlayerFrame src={activeServer.embedUrl} title={`مشغل ${activeServer.name}`} watchInfo={watchInfo} blockPopups={activeServer.id === 'cinesrc' && blockPopups} />
+        <PlayerFrame src={activeServer.embedUrl} title={`مشغل ${activeServer.name}`} watchInfo={watchInfo} blockPopups={activeServer.id === 'cinesrc' && blockPopups} refreshKey={activeServer.id === 'atlantic' ? atlanticRefreshKey : 0} />
       ) : (
         <div className="relative rounded-2xl overflow-hidden bg-black border border-neutral-800/50 shadow-2xl shadow-black/50">
           <div className="aspect-video relative flex items-center justify-center">
@@ -115,6 +122,14 @@ export default function ServerSwitcher({
           ))}
         </div>
       )}
+
+      {activeServer?.id === 'atlantic' && <div className="atlantic-subtitle-help">
+        <button type="button" onClick={() => setAtlanticRefreshKey(key => key + 1)}>
+          ↻ Reload Atlantic player
+        </button>
+        <span>Reloads playback to check for new subtitles. In Captions, choose Auto select if Off was saved earlier.</span>
+        {tmdbId && <a href={mediaType === 'tv' ? `https://atlantic.st/watch/${tmdbId}/${season}/${episode}` : activeServer.embedUrl} target="_blank" rel="noopener noreferrer">Open directly in Atlantic ↗</a>}
+      </div>}
 
       {activeServer?.id === 'cinesrc' && <button
         type="button"
