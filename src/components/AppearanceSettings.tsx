@@ -64,7 +64,7 @@ function Switch({ checked, label, onChange }: { checked: boolean; label: string;
 export default function AppearanceSettings({ open, onClose }: { open: boolean; onClose: () => void }) {
   const theme = useSetting('theme', 'default');
   const customColor = useSetting('custom-color', '#83f343');
-  const episodeView = useSetting('episode-view', 'grid');
+  const episodeView = useSetting('episode-view', 'list');
   const detailView = useSetting('detail-view', 'full');
   const imageLogos = useSetting('image-logos', 'off') === 'on';
   const spoilerFree = useSetting('spoiler-free', 'off') === 'on';

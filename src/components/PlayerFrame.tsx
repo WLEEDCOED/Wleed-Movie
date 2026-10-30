@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from 'react';
 import { addVisibleWatchTime, getResumePosition, recordWatchVisit, saveWatchPosition, type WatchInfo } from '@/lib/watch-history';
+import { saveEpisodePosition, setEpisodesWatched } from '@/lib/episode-progress';
 import { PLAYER_PRESENCE_EVENT } from '@/lib/analytics-events';
 
 /** Vendors still ship prefixed versions of the Fullscreen API (Safari, old Edge). */
@@ -110,6 +111,10 @@ export default function PlayerFrame({ src, title, children, watchInfo, blockPopu
           episodeChangedRef.current = true;
         }
         if (episodeChangedRef.current) return;
+        if (type === 'cinesrc:ended' && info.mediaType === 'tv' && info.season && info.episode) {
+          setEpisodesWatched(info.mediaId, info.season, [info.episode], true);
+          return;
+        }
         if (type === 'cinesrc:pause') {
           iframeRef.current?.contentWindow?.postMessage({ type: 'cinesrc:command', command: 'getCurrentTime', args: [] }, 'https://cinesrc.st');
           return;
@@ -128,6 +133,10 @@ export default function PlayerFrame({ src, title, children, watchInfo, blockPopu
       const last = lastPositionRef.current;
       if (type !== 'cinesrc:seeked' && type !== 'cinesrc:response' && type !== 'vidrift:paused' && now - last.savedAt < 2000 && Math.abs(position - last.seconds) < 10) return;
       saveWatchPosition(info, position, typeof data.duration === 'number' ? data.duration : undefined);
+      if (info.mediaType === 'tv' && info.season && info.episode) {
+        saveEpisodePosition(info.mediaId, info.season, info.episode, position,
+          typeof data.duration === 'number' ? data.duration : info.runtimeSeconds);
+      }
       lastPositionRef.current = { seconds: position, savedAt: now };
     };
     window.addEventListener('message', onMessage);

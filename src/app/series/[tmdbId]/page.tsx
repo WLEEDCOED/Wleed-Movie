@@ -1,14 +1,19 @@
 import { getSeriesDetail, getSeriesHeroExtras, getSeasonEpisodes, getImageUrl } from '@/lib/tmdb';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import WatchlistButton from '@/components/WatchlistButton';
 import MovieHeroImage from '@/components/MovieHeroImage';
+import SeriesEpisodes from '@/components/SeriesEpisodes';
 import type { Metadata } from 'next';
 import type { TMDBTrending } from '@/lib/tmdb';
 import { Suspense } from 'react';
 
 interface PageProps { params: Promise<{ tmdbId: string }>; searchParams: Promise<{ season?: string }> }
+function riyadhToday(): string {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const value = (type: string) => parts.find(part => part.type === type)?.value || '';
+  return `${value('year')}-${value('month')}-${value('day')}`;
+}
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { tmdbId } = await params;
   try { const series = await getSeriesDetail(Number(tmdbId)); return { title: `${series.name} | WleedMovie`, description: series.overview }; }
@@ -25,10 +30,11 @@ export default async function SeriesDetailPage({ params, searchParams }: PagePro
   const availableSeasons = series.seasons.filter(season => season.season_number > 0 && season.episode_count > 0);
   const selectedSeason = availableSeasons.find(season => season.season_number === Number(requestedSeason)) ?? availableSeasons[0];
   const episodes = selectedSeason ? await getSeasonEpisodes(id, selectedSeason.season_number).catch(() => []) : [];
+  const today = riyadhToday();
   const item: TMDBTrending = { id: series.id, media_type: 'tv', name: series.name, overview: series.overview, poster_path: series.poster_path, backdrop_path: series.backdrop_path, vote_average: series.vote_average, first_air_date: series.first_air_date, genre_ids: series.genres.map(genre => genre.id) };
   const backdrop = getImageUrl(series.backdrop_path, 'w1280');
   const titleLogo = getImageUrl(series.images?.logos?.find(logo => logo.iso_639_1 === 'en')?.file_path || null, 'w500');
-  const firstEpisode = episodes[0];
+  const firstEpisode = episodes.find(episode => episode.air_date && episode.air_date <= today);
   return <div className="detail-page">
     <section className="detail-hero" style={backdrop ? { backgroundImage: `url(${backdrop})` } : undefined}>
       <div className="detail-shade" />
@@ -44,8 +50,7 @@ export default async function SeriesDetailPage({ params, searchParams }: PagePro
       </div>
     </section>
     <div id="episodes" className="detail-watch content-shell">
-      {availableSeasons.length > 1 && <nav className="season-nav" aria-label="Choose season">{availableSeasons.map(season => <Link key={season.season_number} href={`/series/${id}?season=${season.season_number}#episodes`} aria-current={season.season_number === selectedSeason?.season_number ? 'page' : undefined}>Season {season.season_number}</Link>)}</nav>}
-      {selectedSeason && <section className="episode-section"><div className="rail-heading"><h2>Season {selectedSeason.season_number}</h2><span className="episode-count">{episodes.length} Episodes</span></div><div className="episode-grid">{episodes.map(episode => { const still = getImageUrl(episode.still_path, 'w300'); return <Link key={episode.id} href={`/watch/tv/${id}/${selectedSeason.season_number}/${episode.episode_number}`} className="episode-card"><div className="episode-image">{still ? <Image src={still} alt={episode.name} width={300} height={169} sizes="(max-width: 740px) 45vw, (max-width: 1100px) 23vw, 20vw" loading="lazy" /> : <span>Episode {episode.episode_number}</span>}<span className="episode-play">▶</span></div><span className="episode-number">Season {selectedSeason.season_number} · Episode {episode.episode_number}</span><h3>{episode.name}</h3></Link>; })}</div></section>}
+      {selectedSeason && <SeriesEpisodes seriesId={id} seasons={availableSeasons} selectedSeason={selectedSeason.season_number} episodes={episodes} today={today} />}
     </div>
     <Suspense fallback={null}><SeriesCast extrasPromise={extrasPromise} /></Suspense>
   </div>;
