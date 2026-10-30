@@ -24,7 +24,7 @@ interface SeriesEpisodesProps {
 }
 
 function formatDate(date: string | null): string {
-  if (!date) return 'Coming soon';
+  if (!date) return 'Release date unavailable';
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
     .format(new Date(`${date}T12:00:00Z`));
 }
@@ -68,21 +68,24 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
     };
   }, [seriesId]);
 
-  const airedEpisodes = episodes.filter(episode => Boolean(episode.air_date && episode.air_date <= today));
-  const watchedCount = airedEpisodes.filter(episode => progress[episodeProgressId(seriesId, selectedSeason, episode.episode_number)]?.watched).length;
-  const allWatched = airedEpisodes.length > 0 && watchedCount === airedEpisodes.length;
+  const availableEpisodes = episodes.filter(episode => {
+    const state = progress[episodeProgressId(seriesId, selectedSeason, episode.episode_number)];
+    return !episode.air_date || episode.air_date <= today || Boolean(state?.watched || (state?.positionSeconds ?? 0) >= 5);
+  });
+  const watchedCount = availableEpisodes.filter(episode => progress[episodeProgressId(seriesId, selectedSeason, episode.episode_number)]?.watched).length;
+  const allWatched = availableEpisodes.length > 0 && watchedCount === availableEpisodes.length;
 
   return <section className="series-episodes" aria-labelledby="series-episodes-title">
     <div className="series-episodes-head">
       <div>
         <span className="series-episodes-eyebrow">EPISODE GUIDE</span>
-        <h2 id="series-episodes-title">Episodes <span>{watchedCount} of {airedEpisodes.length} watched</span></h2>
+        <h2 id="series-episodes-title">Episodes <span>{watchedCount} of {availableEpisodes.length} watched</span></h2>
       </div>
       <div className="series-episodes-controls">
-        {airedEpisodes.length > 0 && <button
+        {availableEpisodes.length > 0 && <button
           type="button"
           className="series-season-mark"
-          onClick={() => setEpisodesWatched(seriesId, selectedSeason, airedEpisodes.map(episode => episode.episode_number), !allWatched)}
+          onClick={() => setEpisodesWatched(seriesId, selectedSeason, availableEpisodes.map(episode => episode.episode_number), !allWatched)}
         >{allWatched ? '↶ Unmark season' : '✓ Mark season watched'}</button>}
         {seasons.length > 1 && <label className="series-season-select">
           <span className="sr-only">Choose season</span>
@@ -97,11 +100,12 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
 
     <div className="series-episode-list">
       {episodes.map(episode => {
-        const upcoming = !episode.air_date || episode.air_date > today;
+        const state = progress[episodeProgressId(seriesId, selectedSeason, episode.episode_number)];
+        const hasPlayed = Boolean(state?.watched || (state?.positionSeconds ?? 0) >= 5);
+        const upcoming = Boolean(episode.air_date && episode.air_date > today && !hasPlayed);
         const daysSinceAir = episode.air_date
           ? Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${episode.air_date}T00:00:00Z`)) / 86400000)
           : Infinity;
-        const state = progress[episodeProgressId(seriesId, selectedSeason, episode.episode_number)];
         const watched = !upcoming && Boolean(state?.watched);
         const inProgress = !upcoming && !watched && Boolean(state?.positionSeconds && state.positionSeconds >= 5);
         const isNew = !upcoming && !watched && daysSinceAir >= 0 && daysSinceAir <= 6;

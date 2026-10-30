@@ -4,6 +4,7 @@ import Link from 'next/link';
 import WatchlistButton from '@/components/WatchlistButton';
 import MovieHeroImage from '@/components/MovieHeroImage';
 import SeriesEpisodes from '@/components/SeriesEpisodes';
+import { resolveEpisodeAirDate } from '@/lib/episode-dates';
 import type { Metadata } from 'next';
 import type { TMDBTrending } from '@/lib/tmdb';
 import { Suspense } from 'react';
@@ -29,12 +30,15 @@ export default async function SeriesDetailPage({ params, searchParams }: PagePro
   if (!series) notFound();
   const availableSeasons = series.seasons.filter(season => season.season_number > 0 && season.episode_count > 0);
   const selectedSeason = availableSeasons.find(season => season.season_number === Number(requestedSeason)) ?? availableSeasons[0];
-  const episodes = selectedSeason ? await getSeasonEpisodes(id, selectedSeason.season_number).catch(() => []) : [];
+  const episodes = selectedSeason
+    ? (await getSeasonEpisodes(id, selectedSeason.season_number).catch(() => []))
+      .map(episode => ({ ...episode, air_date: resolveEpisodeAirDate(id, selectedSeason.season_number, episode.episode_number, episode.air_date) }))
+    : [];
   const today = riyadhToday();
   const item: TMDBTrending = { id: series.id, media_type: 'tv', name: series.name, overview: series.overview, poster_path: series.poster_path, backdrop_path: series.backdrop_path, vote_average: series.vote_average, first_air_date: series.first_air_date, genre_ids: series.genres.map(genre => genre.id) };
   const backdrop = getImageUrl(series.backdrop_path, 'w1280');
   const titleLogo = getImageUrl(series.images?.logos?.find(logo => logo.iso_639_1 === 'en')?.file_path || null, 'w500');
-  const firstEpisode = episodes.find(episode => episode.air_date && episode.air_date <= today);
+  const firstEpisode = episodes.find(episode => !episode.air_date || episode.air_date <= today);
   return <div className="detail-page">
     <section className="detail-hero" style={backdrop ? { backgroundImage: `url(${backdrop})` } : undefined}>
       <div className="detail-shade" />
