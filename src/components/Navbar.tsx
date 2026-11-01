@@ -39,6 +39,20 @@ export default function Navbar() {
     return () => window.removeEventListener('keydown', onKey);
   }, [router]);
 
+  useEffect(() => {
+    const openFromPip = () => { setSettingsOpen(false); setChatOpen(true); };
+    window.addEventListener('pip:open-chat', openFromPip);
+    return () => window.removeEventListener('pip:open-chat', openFromPip);
+  }, []);
+
+  useEffect(() => {
+    const hidden = chatOpen || isWatchPage || pathname === '/admin';
+    document.body.classList.toggle('pip-disabled', hidden);
+    const pip = (window as Window & { pip?: { hide: () => void; show: () => void } }).pip;
+    if (hidden) pip?.hide(); else pip?.show();
+    return () => document.body.classList.remove('pip-disabled');
+  }, [chatOpen, isWatchPage, pathname]);
+
   return <>
     {!isWatchPage && pathname !== '/admin' && <div className="ambient-scene" aria-hidden="true"><AmbientCanvas /></div>}
     <header className={`site-header${isWatchPage ? ' watch-header' : ''}`}>

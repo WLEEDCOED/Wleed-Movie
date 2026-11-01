@@ -32,6 +32,9 @@ a { color: inherit; text-decoration: none; }
 .nav-ai { width: 42px; overflow: visible; }
 .nav-ai img { width: 44px; height: 44px; max-width: none; object-fit: contain; animation: ai-mascot-bob 2.7s ease-in-out infinite; filter: drop-shadow(0 2px 5px #2472ff88); }
 .nav-ai:hover img, .nav-ai[aria-expanded="true"] img { animation-duration: 1.5s; filter: drop-shadow(0 1px 9px #4a9effb8); }
+body #pip { --pip-size: 116px; z-index: 75; }
+body #pip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 18px; }
+body.pip-disabled #pip { display: none !important; }
 @keyframes ai-mascot-bob { 0%, 100% { transform: translateY(1px) rotate(-3deg); } 50% { transform: translateY(-4px) rotate(3deg); } }
 
 /* AI watch chat */
@@ -135,6 +138,8 @@ a { color: inherit; text-decoration: none; }
 .search-results[aria-busy="true"] .catalog-grid { opacity: .55; }
 .search-page a:focus-visible, .search-page button:focus-visible, .search-page select:focus-visible, .search-page input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 @media (max-width: 740px) {
+  body #pip { --pip-size: 76px; }
+  body #pip .bubble { display: none; }
   .search-page { padding-top: 110px; padding-bottom: 140px; }
   .search-page-intro { margin-bottom: 42px; }
   .search-page-back { margin-bottom: 22px; }

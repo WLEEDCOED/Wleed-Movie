@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import Navbar from '@/components/Navbar';
 import PresenceTracker from '@/components/PresenceTracker';
 import BraveRecommendationModal from '@/components/BraveRecommendationModal';
@@ -12,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" dir="ltr" data-theme="default"><head><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous"/><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/></head><body><Navbar/><BraveRecommendationModal/><PresenceTracker enabled={analyticsConfigured()}/><main>{children}</main><footer className="site-footer content-shell"><div><span className="footer-mark">◩</span><strong>WLEED<span>MOVIE</span></strong></div><p>Find your next favorite movie or show. Powered by TMDB.</p><span>© {new Date().getFullYear()} WleedMovie</span></footer></body></html>;
+  return <html lang="en" dir="ltr" data-theme="default"><head><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous"/><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/></head><body><Navbar/><Script src="/pip-widget.js" strategy="afterInteractive"/><BraveRecommendationModal/><PresenceTracker enabled={analyticsConfigured()}/><main>{children}</main><footer className="site-footer content-shell"><div><span className="footer-mark">◩</span><strong>WLEED<span>MOVIE</span></strong></div><p>Find your next favorite movie or show. Powered by TMDB.</p><span>© {new Date().getFullYear()} WleedMovie</span></footer></body></html>;
 }
