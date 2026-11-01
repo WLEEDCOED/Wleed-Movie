@@ -54,6 +54,16 @@ a { color: inherit; text-decoration: none; }
 .ai-chat-choices button { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; border: 1px solid #ffffff22; border-radius: 10px; padding: 9px 10px; background: #ffffff0c; color: #fff; text-align: right; }
 .ai-chat-choices button:hover { border-color: var(--accent); }
 .ai-chat-choices button span { flex: none; color: #aaaab3; font-size: 10px; }
+.ai-chat-message.with-recommendations { width: 100%; max-width: 100%; }
+.ai-chat-recommendations { display: grid; gap: 8px; margin-top: 12px; }
+.ai-chat-recommendations button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 74px; border: 1px solid #ffffff20; border-radius: 12px; padding: 5px; background: #ffffff0a; color: #fff; text-align: right; }
+.ai-chat-recommendations button:hover { border-color: var(--accent); background: rgba(var(--accent-rgb), .1); }
+.ai-chat-recommendations img, .ai-chat-poster-fallback { flex: none; width: 48px; height: 72px; border-radius: 8px; object-fit: cover; background: #24242b; }
+.ai-chat-poster-fallback { display: grid; place-items: center; color: #aaaab3; }
+.ai-chat-recommendation-copy { display: grid; gap: 2px; min-width: 0; }
+.ai-chat-recommendation-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.ai-chat-recommendation-copy small { color: #c7c7ce; font-size: 10px; }
+.ai-chat-recommendation-overview { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; color: #aaaab3; font-size: 10px; line-height: 1.4; }
 .ai-chat-examples { display: flex; gap: 7px; flex-wrap: wrap; padding: 0 16px 10px; }
 .ai-chat-examples button { border: 1px solid #ffffff21; border-radius: 99px; padding: 6px 9px; background: #ffffff0b; color: #d5d5dd; font-size: 11px; }
 .ai-chat-examples button:hover { border-color: var(--accent); }

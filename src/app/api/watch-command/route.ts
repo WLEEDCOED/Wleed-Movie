@@ -6,6 +6,7 @@ import { parseWatchCommand } from '@/lib/watch-command';
 import { interpretWatchCommand } from '@/lib/humain-watch-command';
 import { analyticsConfigured, getRedis } from '@/lib/site-analytics';
 import { isSameOrigin } from '@/lib/request-origin';
+import { getWatchRecommendations, isRecommendationRequest } from '@/lib/watch-recommendations';
 
 async function aiAccess(request: NextRequest): Promise<'allowed' | 'limited' | 'unavailable'> {
   if (!analyticsConfigured()) return 'unavailable';
@@ -45,16 +46,31 @@ export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   let input = '';
   let selectedId: number | undefined;
+  let recommendationContext = '';
+  let excludedIds: number[] = [];
   try {
-    const body = await request.json() as { input?: unknown; selectedId?: unknown };
+    const body = await request.json() as { input?: unknown; selectedId?: unknown; recommendationContext?: unknown; excludedIds?: unknown };
     if (typeof body.input === 'string') input = body.input.trim().slice(0, 160);
     if (typeof body.selectedId === 'number' && Number.isSafeInteger(body.selectedId)) selectedId = body.selectedId;
+    if (typeof body.recommendationContext === 'string') recommendationContext = body.recommendationContext.slice(0, 160);
+    if (Array.isArray(body.excludedIds)) excludedIds = body.excludedIds.filter((id): id is number => typeof id === 'number' && Number.isSafeInteger(id)).slice(0, 40);
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
   const access = await aiAccess(request);
   if (access === 'limited') {
     return NextResponse.json({ error: 'طلبات كثيرة الآن. جرّب بعد دقيقة.' }, { status: 429 });
+  }
+  if (isRecommendationRequest(input) || recommendationContext && /^(?:غيرها|غيرهم|شي ثاني|شي غير|زيد|بعد|more|another)$/i.test(input)) {
+    try {
+      const query = recommendationContext && /^(?:غيرها|غيرهم|شي ثاني|شي غير|زيد|بعد|more|another)$/i.test(input)
+        ? recommendationContext : input;
+      const result = await getWatchRecommendations(query, excludedIds);
+      if (!result.recommendations.length) return NextResponse.json({ error: 'ما لقيت ترشيحات مناسبة حاليًا. جرّب نوعًا أو جوًا مختلفًا.' }, { status: 404 });
+      return NextResponse.json({ ...result, recommendationQuery: query });
+    } catch {
+      return NextResponse.json({ error: 'الترشيحات غير متاحة الآن. حاول مرة ثانية.' }, { status: 502 });
+    }
   }
   const command = access === 'allowed'
     ? await interpretWatchCommand(input) ?? parseWatchCommand(input)

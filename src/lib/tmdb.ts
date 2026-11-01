@@ -19,6 +19,7 @@ export interface TMDBTrending {
   poster_path: string | null;
   backdrop_path: string | null;
   vote_average: number;
+  vote_count?: number;
   first_air_date?: string;
   release_date?: string;
   genre_ids: number[];
@@ -354,6 +355,7 @@ export interface DiscoverParams {
   provider?: number;
   sort?: string;
   country?: string;
+  minVotes?: number;
 }
 
 export interface DiscoverResult {
@@ -383,7 +385,8 @@ export async function discoverMovies(params: DiscoverParams = {}): Promise<Disco
   if (params.genre) queryParams.with_genres = params.genre.toString();
   if (params.year) queryParams.primary_release_year = params.year.toString();
   if (params.country) queryParams.with_origin_country = params.country;
-  if (params.sort === 'vote_average.desc') queryParams['vote_count.gte'] = '200';
+  if (params.minVotes) queryParams['vote_count.gte'] = String(params.minVotes);
+  else if (params.sort === 'vote_average.desc') queryParams['vote_count.gte'] = '200';
   if (params.provider) {
     queryParams.with_watch_providers = params.provider.toString();
   }
@@ -406,7 +409,8 @@ export async function discoverTV(params: DiscoverParams = {}): Promise<DiscoverR
   if (params.genre) queryParams.with_genres = params.genre.toString();
   if (params.year) queryParams.first_air_date_year = params.year.toString();
   if (params.country) queryParams.with_origin_country = params.country;
-  if (params.sort === 'vote_average.desc') queryParams['vote_count.gte'] = '200';
+  if (params.minVotes) queryParams['vote_count.gte'] = String(params.minVotes);
+  else if (params.sort === 'vote_average.desc') queryParams['vote_count.gte'] = '200';
   if (params.provider) {
     queryParams.with_watch_providers = params.provider.toString();
   }
