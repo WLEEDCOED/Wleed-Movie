@@ -3,11 +3,24 @@ export interface WatchCommand {
   type: 'movie' | 'tv' | 'all';
   season?: number;
   episode?: number;
+  personHint?: string;
   continueWatching: boolean;
 }
 
 const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
 const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+
+function numberFromText(value: string): number | undefined {
+  if (/^\d+$/.test(value)) return Number(value);
+  const word = value.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/^ال/, '');
+  const ordinal: Record<string, number> = {
+    اول: 1, اولى: 1, ثاني: 2, ثانيه: 2, ثالث: 3, ثالثه: 3,
+    رابع: 4, رابعه: 4, خامس: 5, خامسه: 5, سادس: 6, سادسه: 6,
+    سابع: 7, سابعه: 7, ثامن: 8, ثامنه: 8, تاسع: 9, تاسعه: 9,
+    عاشر: 10, عاشره: 10,
+  };
+  return ordinal[word];
+}
 
 export function parseWatchCommand(input: string): WatchCommand {
   let text = input.trim().replace(/[٠-٩۰-۹]/g, digit =>
@@ -22,14 +35,14 @@ export function parseWatchCommand(input: string): WatchCommand {
   let episode = compact ? Number(compact[2]) : undefined;
   if (compact) text = text.replace(compact[0], ' ');
 
-  const seasonMatch = text.match(/(?:الموسم|موسم|season|s)\s*[:#-]?\s*(\d{1,2})/i);
-  if (seasonMatch) {
-    season = Number(seasonMatch[1]);
+  const seasonMatch = text.match(/(?:الموسم|موسم|season|s)\s*[:#-]?\s*(\d{1,2}|[ء-ي]+)/i);
+  if (seasonMatch && numberFromText(seasonMatch[1]) !== undefined) {
+    season = numberFromText(seasonMatch[1]);
     text = text.replace(seasonMatch[0], ' ');
   }
-  const episodeMatch = text.match(/(?:الحلقة|حلقه|حلقة|episode|ep|e)\s*[:#-]?\s*(\d{1,3})/i);
-  if (episodeMatch) {
-    episode = Number(episodeMatch[1]);
+  const episodeMatch = text.match(/(?:الحلقة|الحلقه|حلقه|حلقة|episode|ep|e)\s*[:#-]?\s*(\d{1,3}|[ء-ي]+)/i);
+  if (episodeMatch && numberFromText(episodeMatch[1]) !== undefined) {
+    episode = numberFromText(episodeMatch[1]);
     text = text.replace(episodeMatch[0], ' ');
   }
 

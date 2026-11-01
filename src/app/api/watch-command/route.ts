@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { episodeDateStatus, resolveEpisodeAirDate, riyadhToday } from '@/lib/episode-dates';
-import { getSeasonEpisodes, getTitle, getYear, searchMovies, searchMulti, searchTV, type TMDBTrending } from '@/lib/tmdb';
+import { getSeasonEpisodes, getSeriesHeroExtras, getTitle, getYear, searchMovies, searchMulti, searchTV, type TMDBTrending } from '@/lib/tmdb';
 import { parseWatchCommand } from '@/lib/watch-command';
 import { interpretWatchCommand } from '@/lib/humain-watch-command';
 import { analyticsConfigured, getRedis } from '@/lib/site-analytics';
@@ -33,7 +33,8 @@ function score(item: TMDBTrending, title: string) {
   return Math.max(...names.map(name => {
     const value = normalized(name);
     if (value === target) return 100;
-    if (value.startsWith(`${target} `)) return 78;
+    if (value === `${target}s` || target === `${value}s`) return 90;
+    if (value.startsWith(target)) return 78;
     if (value.includes(target)) return 58;
     const words = target.split(' ').filter(word => word.length > 1);
     return words.length ? Math.round(words.filter(word => value.includes(word)).length / words.length * 35) : 0;
@@ -65,13 +66,37 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const results = command.type === 'tv' ? (await searchTV(command.title)).results
+    let results = command.type === 'tv' ? (await searchTV(command.title)).results
       : command.type === 'movie' ? (await searchMovies(command.title)).results
         : await searchMulti(command.title);
-    const ranked = results.map(item => ({ item, rank: score(item, command.title) }))
+    if (command.personHint && command.type === 'tv' && /^[\p{L}\s]+$/u.test(command.title)) {
+      const variant = command.title.endsWith('s') ? command.title.slice(0, -1) : `${command.title}s`;
+      if (variant.length >= 2 && variant !== command.title) {
+        const related = (await searchTV(variant)).results;
+        const seen = new Set(results.map(item => item.id));
+        results = [...results, ...related.filter(item => !seen.has(item.id))];
+      }
+    }
+    let ranked = results.map(item => ({ item, rank: score(item, command.title) }))
       .filter(result => result.rank > 0)
       .sort((a, b) => b.rank - a.rank);
     if (!ranked.length) return NextResponse.json({ error: 'ما لقيت العمل. جرّب اسمه الإنجليزي أو اكتب الاسم كاملًا.' }, { status: 404 });
+
+    if (command.personHint && command.type === 'tv') {
+      const person = normalized(command.personHint);
+      const strongCandidates = ranked.filter(result => result.item.media_type === 'tv' && result.rank >= 70);
+      const candidates = (strongCandidates.length ? strongCandidates
+        : ranked.filter(result => result.item.media_type === 'tv' && result.rank >= 50)).slice(0, 16);
+      const withCast = await Promise.all(candidates.map(async result => {
+        const { cast } = await getSeriesHeroExtras(result.item.id);
+        return { ...result, matched: cast.some(actor => normalized(actor.name).includes(person)) };
+      }));
+      const matches = withCast.filter(result => result.matched);
+      if (matches.length) ranked = matches.sort((a, b) => b.rank - a.rank);
+      else if (!selectedId) return NextResponse.json({ choices: ranked.slice(0, 4).map(({ item }) => ({
+        id: item.id, title: getTitle(item), year: getYear(item), type: item.media_type,
+      })) });
+    }
 
     const choice = selectedId ? ranked.find(result => result.item.id === selectedId) : ranked[0];
     if (!choice) return NextResponse.json({ error: 'اختر عملًا من النتائج.' }, { status: 400 });
