@@ -58,16 +58,16 @@ export default function WatchAssistant() {
   }
 
   return <section className="watch-assistant" aria-label="Watch assistant">
-    <div className="watch-assistant-heading"><span className="watch-assistant-icon" aria-hidden="true">✦</span><div><strong>Watch Assistant</strong><p>اكتب اللي تبي تشاهده، ونفتح لك صفحة المشاهدة مباشرة.</p></div></div>
+    <div className="watch-assistant-heading"><span className="watch-assistant-icon" aria-hidden="true">✦</span><div><strong>AI Watch Assistant</strong><p>اكتب بالعامية اللي تبي تشاهده، ونفتح لك صفحة الحلقة مباشرة.</p></div></div>
     <form className="watch-assistant-form" onSubmit={event => { event.preventDefault(); void openCommand(); }}>
       <label className="sr-only" htmlFor="watch-command">What would you like to watch?</label>
       <input id="watch-command" dir="auto" autoComplete="off" value={input} maxLength={160}
         onChange={event => { setInput(event.target.value); setError(''); setChoices([]); }}
-        placeholder="شغّل Tulsa King الموسم 4 الحلقة 3" />
+        placeholder="أبي الحلقة الثالثة من الموسم الثاني من مودرن فاميلي" />
       <button type="submit" disabled={busy || !input.trim()}>{busy ? 'جاري البحث…' : 'افتح ↗'}</button>
     </form>
     <div className="watch-assistant-examples" dir="rtl"><span>جرّب:</span>
-      {['شغّل Tulsa King الموسم 4 الحلقة 3', 'شغّل فيلم The Matrix', 'كمّل اللي كنت أتابعه'].map(example =>
+      {['أبي الحلقة الثالثة من الموسم الثاني من مودرن فاميلي', 'شغّل فيلم The Matrix', 'كمّل اللي كنت أتابعه'].map(example =>
         <button key={example} type="button" onClick={() => { setInput(example); setError(''); setChoices([]); }}>{example}</button>)}
     </div>
     <div aria-live="polite" dir="rtl">

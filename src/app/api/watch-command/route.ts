@@ -1,7 +1,27 @@
+import { createHmac } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { episodeDateStatus, resolveEpisodeAirDate, riyadhToday } from '@/lib/episode-dates';
 import { getSeasonEpisodes, getTitle, getYear, searchMovies, searchMulti, searchTV, type TMDBTrending } from '@/lib/tmdb';
 import { parseWatchCommand } from '@/lib/watch-command';
+import { interpretWatchCommand } from '@/lib/humain-watch-command';
+import { analyticsConfigured, getRedis } from '@/lib/site-analytics';
+import { isSameOrigin } from '@/lib/request-origin';
+
+async function aiAccess(request: NextRequest): Promise<'allowed' | 'limited' | 'unavailable'> {
+  if (!analyticsConfigured()) return 'unavailable';
+  try {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const secret = process.env.ADMIN_SESSION_SECRET || process.env.HUMAIN_NODE_API_KEY || '';
+    const id = createHmac('sha256', secret).update(ip).digest('hex').slice(0, 24);
+    const key = `wm:ai:minute:${Math.floor(Date.now() / 60_000)}:${id}`;
+    const redis = getRedis();
+    const count = await redis.incr(key);
+    if (count === 1) await redis.expire(key, 90);
+    return count > 12 ? 'limited' : 'allowed';
+  } catch {
+    return 'unavailable';
+  }
+}
 
 function normalized(value: string) {
   return value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -21,6 +41,7 @@ function score(item: TMDBTrending, title: string) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   let input = '';
   let selectedId: number | undefined;
   try {
@@ -30,7 +51,13 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
-  const command = parseWatchCommand(input);
+  const access = await aiAccess(request);
+  if (access === 'limited') {
+    return NextResponse.json({ error: 'طلبات كثيرة الآن. جرّب بعد دقيقة.' }, { status: 429 });
+  }
+  const command = access === 'allowed'
+    ? await interpretWatchCommand(input) ?? parseWatchCommand(input)
+    : parseWatchCommand(input);
   if (command.title.length < 2) return NextResponse.json({ error: 'اكتب اسم الفيلم أو المسلسل ورقم الحلقة.' }, { status: 400 });
   if (command.season !== undefined && (command.season < 0 || command.season > 99)
     || command.episode !== undefined && (command.episode < 1 || command.episode > 999)) {
