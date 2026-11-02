@@ -31,6 +31,15 @@ export interface Recommendation {
   poster: string | null;
 }
 
+function shuffled<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 export function isRecommendationRequest(input: string) {
   return /(?:انصحني|نصحني|رشح(?:لي| لي|وا)?|ترشيحات|توصيات|اقترح|إقترح|اقتراح|وش اشوف|وش أشوف|وش اتابع|وش أتابع|ابي شي|أبي شي|ابغى شي|أبغى شي|recommend|suggest|what (?:should|to) watch)/i.test(input);
 }
@@ -89,33 +98,42 @@ async function preferencesFromAI(input: string, fallback: Preferences): Promise<
   }
 }
 
-export async function getWatchRecommendations(input: string, excludedIds: number[] = []) {
+export async function getWatchRecommendations(input: string, excludedIds: (number | string)[] = []) {
   const preferences = await preferencesFromAI(input, localPreferences(input));
   const types: ('movie' | 'tv')[] = preferences.type === 'all' ? ['tv', 'movie'] : [preferences.type];
-  const pages = await Promise.all(types.map(async type => {
-    const genre = preferences.genre ? GENRES[preferences.genre][type] : undefined;
-    const minVotes = preferences.country ? 50 : preferences.year ? 100 : 700;
-    const result = genre || preferences.country || preferences.year
-      ? type === 'movie'
-        ? await discoverMovies({ genre, country: preferences.country, year: preferences.year, sort: 'vote_average.desc', minVotes })
-        : await discoverTV({ genre, country: preferences.country, year: preferences.year, sort: 'vote_average.desc', minVotes })
-      : await getCategoryPage(type, 'top_rated');
-    return result.results;
-  }));
   const today = new Date().toISOString().slice(0, 10);
-  const excluded = new Set(excludedIds);
-  const candidates = pages.flat().filter(item => {
-    const date = item.release_date || item.first_air_date;
-    return !excluded.has(item.id) && Boolean(date && date <= today) && item.vote_average >= 6.5
-      && (item.vote_count || 0) >= (preferences.country ? 50 : preferences.year ? 100 : 700) && item.poster_path;
-  });
+  const excluded = new Set(excludedIds.map(String));
+  const minVotes = preferences.country ? 50 : preferences.year ? 100 : 700;
+  const candidatesByType = await Promise.all(types.map(async type => {
+    const genre = preferences.genre ? GENRES[preferences.genre][type] : undefined;
+    const getPage = (page: number) => genre || preferences.country || preferences.year
+      ? type === 'movie'
+        ? discoverMovies({ genre, country: preferences.country, year: preferences.year, sort: 'vote_average.desc', minVotes, page })
+        : discoverTV({ genre, country: preferences.country, year: preferences.year, sort: 'vote_average.desc', minVotes, page })
+      : getCategoryPage(type, 'top_rated', page);
+    const firstPage = await getPage(1);
+    const pageLimit = Math.min(firstPage.totalPages, Math.max(20, Math.ceil(excluded.size / 2) + 10), 100);
+    const pageOrder = shuffled(Array.from({ length: pageLimit }, (_, index) => index + 1));
+    const picked: TMDBTrending[] = [];
+    for (const page of pageOrder.slice(0, 6)) {
+      const results = page === 1 ? firstPage.results : (await getPage(page)).results;
+      for (const item of shuffled(results)) {
+        const date = item.release_date || item.first_air_date;
+        if (!date || date > today || item.vote_average < 6.5 || (item.vote_count || 0) < minVotes || !item.poster_path
+          || excluded.has(`${type}:${item.id}`) || excluded.has(String(item.id))
+          || picked.some(candidate => candidate.id === item.id)) continue;
+        picked.push(item);
+        if (picked.length === 4) break;
+      }
+      if (picked.length === 4) break;
+    }
+    return picked;
+  }));
   const selected: TMDBTrending[] = [];
   if (preferences.type === 'all') {
-    for (const type of types) {
-      selected.push(...candidates.filter(candidate => candidate.media_type === type).slice(0, 2));
-    }
+    for (const candidates of candidatesByType) selected.push(...candidates.slice(0, 2));
   }
-  for (const item of candidates) {
+  for (const item of candidatesByType.flat()) {
     if (selected.length >= 4) break;
     if (!selected.some(chosen => chosen.id === item.id && chosen.media_type === item.media_type)) selected.push(item);
   }

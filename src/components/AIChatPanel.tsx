@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getWatchHistory } from '@/lib/watch-history';
-import { parseWatchCommand } from '@/lib/watch-command';
+import { isMoreRecommendationsRequest, parseWatchCommand } from '@/lib/watch-command';
 
 interface Choice { id: number; title: string; year: string; type: 'movie' | 'tv'; season?: number; episode?: number }
 interface Recommendation { id: number; title: string; year: string; type: 'movie' | 'tv'; href: string; rating: number; overview: string; poster: string | null }
@@ -56,16 +56,16 @@ export default function AIChatPanel({ onClose }: { onClose: () => void }) {
       }
 
       const previous = [...messages].reverse().find(message => message.recommendations?.length);
-      const moreRecommendations = /^(?:غيرها|غيرهم|شي ثاني|شي غير|زيد|بعد|more|another)$/i.test(command);
+      const moreRecommendations = isMoreRecommendationsRequest(command);
       const response = await fetch('/api/watch-command', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ input: command, ...(selection ? {
           selectedId: selection.id, selectedType: selection.type, season: selection.season, episode: selection.episode,
         } : {}),
           context: messages.filter(message => message.role === 'user').slice(-3).map(message => message.text),
-          ...(moreRecommendations && previous ? {
-            recommendationContext: previous.query,
-            excludedIds: messages.flatMap(message => message.recommendations?.map(item => item.id) || []),
+          ...(moreRecommendations ? {
+            recommendationContext: previous?.query,
+            excludedIds: messages.flatMap(message => message.recommendations?.map(item => `${item.type}:${item.id}`) || []),
           } : {}),
         }),
       });

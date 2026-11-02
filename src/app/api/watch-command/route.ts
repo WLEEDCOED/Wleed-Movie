@@ -2,7 +2,7 @@ import { createHmac } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { episodeDateStatus, resolveEpisodeAirDate, riyadhToday } from '@/lib/episode-dates';
 import { getSeasonEpisodes, getSeriesDetail, getSeriesHeroExtras, getTitle, getYear, searchMovies, searchMulti, searchTV, type TMDBTrending } from '@/lib/tmdb';
-import { parseWatchCommand, type WatchCommand } from '@/lib/watch-command';
+import { isMoreRecommendationsRequest, parseWatchCommand, type WatchCommand } from '@/lib/watch-command';
 import { interpretWatchCommand } from '@/lib/humain-watch-command';
 import { analyticsConfigured, getRedis } from '@/lib/site-analytics';
 import { isSameOrigin } from '@/lib/request-origin';
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
   let selectedSeason: number | undefined;
   let selectedEpisode: number | undefined;
   let recommendationContext = '';
-  let excludedIds: number[] = [];
+  let excludedIds: (number | string)[] = [];
   let context: string[] = [];
   try {
     const body = await request.json() as { input?: unknown; selectedId?: unknown; selectedType?: unknown; season?: unknown; episode?: unknown; recommendationContext?: unknown; excludedIds?: unknown; context?: unknown };
@@ -67,7 +67,9 @@ export async function POST(request: NextRequest) {
     if (typeof body.season === 'number' && Number.isInteger(body.season) && body.season >= 0 && body.season <= 99) selectedSeason = body.season;
     if (typeof body.episode === 'number' && Number.isInteger(body.episode) && body.episode >= 1 && body.episode <= 999) selectedEpisode = body.episode;
     if (typeof body.recommendationContext === 'string') recommendationContext = body.recommendationContext.slice(0, 160);
-    if (Array.isArray(body.excludedIds)) excludedIds = body.excludedIds.filter((id): id is number => typeof id === 'number' && Number.isSafeInteger(id)).slice(0, 40);
+    if (Array.isArray(body.excludedIds)) excludedIds = body.excludedIds.filter((id): id is number | string =>
+      typeof id === 'number' && Number.isSafeInteger(id) && id > 0
+      || typeof id === 'string' && /^(?:movie|tv):\d+$/.test(id)).slice(0, 300);
     if (Array.isArray(body.context)) context = body.context.filter((value): value is string => typeof value === 'string').slice(-3).map(value => value.slice(0, 160));
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
@@ -96,8 +98,8 @@ export async function POST(request: NextRequest) {
   if (access === 'limited') {
     return NextResponse.json({ error: 'طلبات كثيرة الآن. جرّب بعد دقيقة.' }, { status: 429 });
   }
-  const moreRecommendations = /^(?:غيرها|غيرهم|شي ثاني|شي غير|زيد|بعد|more|another)$/i.test(input);
-  const recommend = isRecommendationRequest(input) || Boolean(recommendationContext && moreRecommendations);
+  const moreRecommendations = isMoreRecommendationsRequest(input);
+  const recommend = isRecommendationRequest(input) || moreRecommendations;
   let command = recommend ? null : access === 'allowed'
     ? await interpretWatchCommand(input, context) ?? parseWatchCommand(input)
     : parseWatchCommand(input);
@@ -108,8 +110,7 @@ export async function POST(request: NextRequest) {
   }
   if (recommend || command?.intent === 'recommend') {
     try {
-      const query = recommendationContext && moreRecommendations
-        ? recommendationContext : input;
+      const query = moreRecommendations ? recommendationContext || 'رشح لي أفلام ومسلسلات' : input;
       const result = await getWatchRecommendations(query, excludedIds);
       if (!result.recommendations.length) return NextResponse.json({ message: 'قل لي وش جوّك أكثر: أكشن، كوميديا، رعب، أو شيء ثاني؟' });
       return NextResponse.json({ ...result, recommendationQuery: query });

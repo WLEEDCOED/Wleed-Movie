@@ -10,6 +10,11 @@ export interface WatchCommand {
   continueWatching: boolean;
 }
 
+export function isMoreRecommendationsRequest(input: string): boolean {
+  return /^(?:(?:ما عجبني|ما عجبوني|ما ناسبني|ما ناسبوني)\s*)?(?:(?:ابي|أبي|ابغى|أبغى|عطني|اعطني|هات|ورني)\s*)?(?:غيرهم|غيرها|غيرلي|غير|شي ثاني|شي غير|زيد|بعد|more|another)?[؟?!.،\s]*$/i.test(input)
+    && /(?:غيرهم|غيرها|غيرلي|غير|شي ثاني|شي غير|زيد|بعد|more|another|ما عجبني|ما عجبوني|ما ناسبني|ما ناسبوني)/i.test(input);
+}
+
 const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
 const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
 
