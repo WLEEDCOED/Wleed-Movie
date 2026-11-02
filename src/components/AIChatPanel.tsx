@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getWatchHistory } from '@/lib/watch-history';
 import { parseWatchCommand } from '@/lib/watch-command';
 
-interface Choice { id: number; title: string; year: string; type: string }
+interface Choice { id: number; title: string; year: string; type: 'movie' | 'tv'; season?: number; episode?: number }
 interface Recommendation { id: number; title: string; year: string; type: 'movie' | 'tv'; href: string; rating: number; overview: string; poster: string | null }
 interface ResolveResponse { href?: string; title?: string; choices?: Choice[]; recommendations?: Recommendation[]; recommendationQuery?: string; description?: string; message?: string; error?: string }
 interface Message { role: 'assistant' | 'user'; text: string; choices?: Choice[]; recommendations?: Recommendation[]; query?: string }
@@ -30,17 +30,17 @@ export default function AIChatPanel({ onClose }: { onClose: () => void }) {
 
   useEffect(() => { messagesRef.current?.scrollTo({ top: messagesRef.current.scrollHeight, behavior: 'smooth' }); }, [messages, busy]);
 
-  async function submit(query: string, selectedId?: number) {
+  async function submit(query: string, selection?: Choice) {
     const command = query.trim();
     if (!command || busy) return;
-    if (!selectedId) {
+    if (!selection) {
       setMessages(current => [...current, { role: 'user', text: command }]);
       setInput('');
     }
     setBusy(true);
     try {
       const parsed = parseWatchCommand(command);
-      if (parsed.continueWatching && !selectedId) {
+      if (parsed.continueWatching && !selection) {
         const history = getWatchHistory();
         const entry = parsed.title
           ? history.find(item => item.title.toLocaleLowerCase().includes(parsed.title.toLocaleLowerCase()))
@@ -59,7 +59,9 @@ export default function AIChatPanel({ onClose }: { onClose: () => void }) {
       const moreRecommendations = /^(?:غيرها|غيرهم|شي ثاني|شي غير|زيد|بعد|more|another)$/i.test(command);
       const response = await fetch('/api/watch-command', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: command, ...(selectedId ? { selectedId } : {}),
+        body: JSON.stringify({ input: command, ...(selection ? {
+          selectedId: selection.id, selectedType: selection.type, season: selection.season, episode: selection.episode,
+        } : {}),
           context: messages.filter(message => message.role === 'user').slice(-3).map(message => message.text),
           ...(moreRecommendations && previous ? {
             recommendationContext: previous.query,
@@ -102,7 +104,7 @@ export default function AIChatPanel({ onClose }: { onClose: () => void }) {
         {messages.map((message, index) => <div className={`ai-chat-message ${message.role}${message.recommendations ? ' with-recommendations' : ''}`} key={index} dir="auto">
           <p>{message.text}</p>
           {message.choices && <div className="ai-chat-choices" dir="rtl">{message.choices.map(choice =>
-            <button type="button" key={`${choice.type}-${choice.id}`} disabled={busy} onClick={() => void submit(message.query || '', choice.id)}>
+            <button type="button" key={`${choice.type}-${choice.id}`} disabled={busy} onClick={() => void submit(message.query || '', choice)}>
               <strong>{choice.title}</strong><span>{choice.year || '—'} · {choice.type === 'tv' ? 'مسلسل' : 'فيلم'}</span>
             </button>)}</div>}
           {message.recommendations && <div className="ai-chat-recommendations" dir="rtl">{message.recommendations.map(item =>

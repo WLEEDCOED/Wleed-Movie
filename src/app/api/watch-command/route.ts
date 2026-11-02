@@ -1,8 +1,8 @@
 import { createHmac } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { episodeDateStatus, resolveEpisodeAirDate, riyadhToday } from '@/lib/episode-dates';
-import { getSeasonEpisodes, getSeriesHeroExtras, getTitle, getYear, searchMovies, searchMulti, searchTV, type TMDBTrending } from '@/lib/tmdb';
-import { parseWatchCommand } from '@/lib/watch-command';
+import { getSeasonEpisodes, getSeriesDetail, getSeriesHeroExtras, getTitle, getYear, searchMovies, searchMulti, searchTV, type TMDBTrending } from '@/lib/tmdb';
+import { parseWatchCommand, type WatchCommand } from '@/lib/watch-command';
 import { interpretWatchCommand } from '@/lib/humain-watch-command';
 import { analyticsConfigured, getRedis } from '@/lib/site-analytics';
 import { isSameOrigin } from '@/lib/request-origin';
@@ -42,9 +42,10 @@ function score(item: TMDBTrending, title: string) {
   }));
 }
 
-function choices(items: { item: TMDBTrending }[]) {
+function choices(items: { item: TMDBTrending }[], command: WatchCommand) {
   return items.slice(0, 5).map(({ item }) => ({
     id: item.id, title: getTitle(item), year: getYear(item), type: item.media_type,
+    ...(item.media_type === 'tv' ? { season: command.season, episode: command.episode } : {}),
   }));
 }
 
@@ -52,18 +53,44 @@ export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   let input = '';
   let selectedId: number | undefined;
+  let selectedType: 'tv' | 'movie' | undefined;
+  let selectedSeason: number | undefined;
+  let selectedEpisode: number | undefined;
   let recommendationContext = '';
   let excludedIds: number[] = [];
   let context: string[] = [];
   try {
-    const body = await request.json() as { input?: unknown; selectedId?: unknown; recommendationContext?: unknown; excludedIds?: unknown; context?: unknown };
+    const body = await request.json() as { input?: unknown; selectedId?: unknown; selectedType?: unknown; season?: unknown; episode?: unknown; recommendationContext?: unknown; excludedIds?: unknown; context?: unknown };
     if (typeof body.input === 'string') input = body.input.trim().slice(0, 160);
-    if (typeof body.selectedId === 'number' && Number.isSafeInteger(body.selectedId)) selectedId = body.selectedId;
+    if (typeof body.selectedId === 'number' && Number.isSafeInteger(body.selectedId) && body.selectedId > 0) selectedId = body.selectedId;
+    if (body.selectedType === 'tv' || body.selectedType === 'movie') selectedType = body.selectedType;
+    if (typeof body.season === 'number' && Number.isInteger(body.season) && body.season >= 0 && body.season <= 99) selectedSeason = body.season;
+    if (typeof body.episode === 'number' && Number.isInteger(body.episode) && body.episode >= 1 && body.episode <= 999) selectedEpisode = body.episode;
     if (typeof body.recommendationContext === 'string') recommendationContext = body.recommendationContext.slice(0, 160);
     if (Array.isArray(body.excludedIds)) excludedIds = body.excludedIds.filter((id): id is number => typeof id === 'number' && Number.isSafeInteger(id)).slice(0, 40);
     if (Array.isArray(body.context)) context = body.context.filter((value): value is string => typeof value === 'string').slice(-3).map(value => value.slice(0, 160));
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
+  }
+  if (selectedId) {
+    try {
+      // A selected card already identifies the title. Re-running the AI search can change its spelling.
+      const legacy = parseWatchCommand(input);
+      const type = selectedType || (legacy.type !== 'all' ? legacy.type
+        : await getSeriesDetail(selectedId).then(() => 'tv' as const).catch(() => 'movie' as const));
+      if (type === 'movie') return NextResponse.json({ href: `/watch/movie/${selectedId}` });
+      const season = selectedSeason ?? legacy.season ?? 1;
+      const episode = selectedEpisode ?? legacy.episode;
+      if (!episode) return NextResponse.json({ href: `/series/${selectedId}${selectedSeason !== undefined || legacy.season !== undefined ? `?season=${season}#episodes` : ''}` });
+      const episodes = await getSeasonEpisodes(selectedId, season);
+      const matched = episodes.find(entry => entry.episode_number === episode);
+      if (!matched) return NextResponse.json({ message: `الحلقة ${episode} غير ظاهرة في الموسم ${season}. تأكد من رقمها وجرّب مرة ثانية.` });
+      const airDate = resolveEpisodeAirDate(selectedId, season, episode, matched.air_date);
+      if (episodeDateStatus(airDate, riyadhToday()) === 'upcoming') return NextResponse.json({ message: `الحلقة ${episode} ما صدرت بعد.` });
+      return NextResponse.json({ href: `/watch/tv/${selectedId}/${season}/${episode}` });
+    } catch {
+      return NextResponse.json({ message: 'تعذّر فتح هذا الخيار الآن. جرّب الضغط عليه مرة ثانية.' });
+    }
   }
   const access = await aiAccess(request);
   if (access === 'limited') {
@@ -116,7 +143,7 @@ export async function POST(request: NextRequest) {
         const key = `${item.media_type}-${item.id}`;
         if (rank > (found.get(key)?.rank || 0)) found.set(key, { item, rank });
       });
-      if (![...found.values()].some(result => result.rank >= 78) || /[\u0600-\u06ff]/.test(input) || selectedId) continue;
+      if (![...found.values()].some(result => result.rank >= 78) || /[\u0600-\u06ff]/.test(input)) continue;
       break;
     }
     let ranked = [...found.values()].sort((a, b) => b.rank - a.rank);
@@ -133,13 +160,13 @@ export async function POST(request: NextRequest) {
       }));
       const matches = withCast.filter(result => result.matched);
       if (matches.length) ranked = matches.sort((a, b) => b.rank - a.rank);
-      else if (!selectedId) return NextResponse.json({ message: 'لقيت أكثر من احتمال. أي واحد تقصد؟', choices: choices(ranked) });
+      else return NextResponse.json({ message: 'لقيت أكثر من احتمال. أي واحد تقصد؟', choices: choices(ranked, command) });
     }
 
-    const choice = selectedId ? ranked.find(result => result.item.id === selectedId) : ranked[0];
+    const choice = ranked[0];
     if (!choice) return NextResponse.json({ message: 'اختر واحدًا من الخيارات، أو اكتب لي الاسم بشكل أوضح.' });
-    if (!selectedId && (choice.rank < 58 || ranked.length > 1 && ranked[1].rank >= 78 && ranked[1].rank >= choice.rank - 10)) {
-      return NextResponse.json({ message: 'تقصد أي واحد من هذي الأعمال؟', choices: choices(ranked) });
+    if (choice.rank < 58 || ranked.length > 1 && ranked[1].rank >= 78 && ranked[1].rank >= choice.rank - 10) {
+      return NextResponse.json({ message: 'تقصد أي واحد من هذي الأعمال؟', choices: choices(ranked, command) });
     }
 
     const item = choice.item;
