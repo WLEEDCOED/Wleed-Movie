@@ -8,7 +8,7 @@ import { parseWatchCommand } from '@/lib/watch-command';
 
 interface Choice { id: number; title: string; year: string; type: string }
 interface Recommendation { id: number; title: string; year: string; type: 'movie' | 'tv'; href: string; rating: number; overview: string; poster: string | null }
-interface ResolveResponse { href?: string; title?: string; choices?: Choice[]; recommendations?: Recommendation[]; recommendationQuery?: string; description?: string; error?: string }
+interface ResolveResponse { href?: string; title?: string; choices?: Choice[]; recommendations?: Recommendation[]; recommendationQuery?: string; description?: string; message?: string; error?: string }
 interface Message { role: 'assistant' | 'user'; text: string; choices?: Choice[]; recommendations?: Recommendation[]; query?: string }
 
 export default function AIChatPanel({ onClose }: { onClose: () => void }) {
@@ -51,7 +51,7 @@ export default function AIChatPanel({ onClose }: { onClose: () => void }) {
           router.push(entry.href);
           return;
         }
-        setMessages(current => [...current, { role: 'assistant', text: 'ما لقيت هذا العمل في Continue Watching على هذا الجهاز. جرّب تكتب اسمه ورقم الحلقة.' }]);
+        setMessages(current => [...current, { role: 'assistant', text: 'وش العمل اللي تبي تكمله؟ اكتب اسمه ورقم الحلقة وأفتحه لك.' }]);
         return;
       }
 
@@ -60,6 +60,7 @@ export default function AIChatPanel({ onClose }: { onClose: () => void }) {
       const response = await fetch('/api/watch-command', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ input: command, ...(selectedId ? { selectedId } : {}),
+          context: messages.filter(message => message.role === 'user').slice(-3).map(message => message.text),
           ...(moreRecommendations && previous ? {
             recommendationContext: previous.query,
             excludedIds: messages.flatMap(message => message.recommendations?.map(item => item.id) || []),
@@ -77,7 +78,10 @@ export default function AIChatPanel({ onClose }: { onClose: () => void }) {
         setMessages(current => [...current, { role: 'assistant', text: `هذي ترشيحاتي لك${description}. اختر عملًا عشان تشوف تفاصيله:`,
           recommendations: result.recommendations, query: result.recommendationQuery || command }]);
       } else if (result.choices?.length) {
-        setMessages(current => [...current, { role: 'assistant', text: 'لقيت أكثر من عمل بهذا الاسم. أي واحد تقصد؟', choices: result.choices, query: command }]);
+        setMessages(current => [...current, { role: 'assistant', text: result.message || 'أي واحد تقصد؟', choices: result.choices, query: command }]);
+      } else if (result.message) {
+        const reply = result.message;
+        setMessages(current => [...current, { role: 'assistant', text: reply }]);
       }
     } catch {
       setMessages(current => [...current, { role: 'assistant', text: 'تعذّر الاتصال الآن. جرّب مرة ثانية.' }]);

@@ -1,6 +1,9 @@
 export interface WatchCommand {
   title: string;
   type: 'movie' | 'tv' | 'all';
+  intent?: 'watch' | 'recommend' | 'chat' | 'clarify';
+  reply?: string;
+  alternateTitles?: string[];
   season?: number;
   episode?: number;
   personHint?: string;

@@ -42,18 +42,26 @@ function score(item: TMDBTrending, title: string) {
   }));
 }
 
+function choices(items: { item: TMDBTrending }[]) {
+  return items.slice(0, 5).map(({ item }) => ({
+    id: item.id, title: getTitle(item), year: getYear(item), type: item.media_type,
+  }));
+}
+
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   let input = '';
   let selectedId: number | undefined;
   let recommendationContext = '';
   let excludedIds: number[] = [];
+  let context: string[] = [];
   try {
-    const body = await request.json() as { input?: unknown; selectedId?: unknown; recommendationContext?: unknown; excludedIds?: unknown };
+    const body = await request.json() as { input?: unknown; selectedId?: unknown; recommendationContext?: unknown; excludedIds?: unknown; context?: unknown };
     if (typeof body.input === 'string') input = body.input.trim().slice(0, 160);
     if (typeof body.selectedId === 'number' && Number.isSafeInteger(body.selectedId)) selectedId = body.selectedId;
     if (typeof body.recommendationContext === 'string') recommendationContext = body.recommendationContext.slice(0, 160);
     if (Array.isArray(body.excludedIds)) excludedIds = body.excludedIds.filter((id): id is number => typeof id === 'number' && Number.isSafeInteger(id)).slice(0, 40);
+    if (Array.isArray(body.context)) context = body.context.filter((value): value is string => typeof value === 'string').slice(-3).map(value => value.slice(0, 160));
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
@@ -61,42 +69,58 @@ export async function POST(request: NextRequest) {
   if (access === 'limited') {
     return NextResponse.json({ error: 'طلبات كثيرة الآن. جرّب بعد دقيقة.' }, { status: 429 });
   }
-  if (isRecommendationRequest(input) || recommendationContext && /^(?:غيرها|غيرهم|شي ثاني|شي غير|زيد|بعد|more|another)$/i.test(input)) {
+  const moreRecommendations = /^(?:غيرها|غيرهم|شي ثاني|شي غير|زيد|بعد|more|another)$/i.test(input);
+  const recommend = isRecommendationRequest(input) || Boolean(recommendationContext && moreRecommendations);
+  let command = recommend ? null : access === 'allowed'
+    ? await interpretWatchCommand(input, context) ?? parseWatchCommand(input)
+    : parseWatchCommand(input);
+  if (command && command.title.length < 2 && command.episode !== undefined && context.length) {
+    const previous = [...context].reverse().find(value => /(?:مسلسل|فيلم|series|show|movie|film)/i.test(value));
+    const previousTitle = previous ? parseWatchCommand(previous).title : '';
+    if (previousTitle.length >= 2) command = { ...command, title: previousTitle, type: 'tv', intent: 'watch' };
+  }
+  if (recommend || command?.intent === 'recommend') {
     try {
-      const query = recommendationContext && /^(?:غيرها|غيرهم|شي ثاني|شي غير|زيد|بعد|more|another)$/i.test(input)
+      const query = recommendationContext && moreRecommendations
         ? recommendationContext : input;
       const result = await getWatchRecommendations(query, excludedIds);
-      if (!result.recommendations.length) return NextResponse.json({ error: 'ما لقيت ترشيحات مناسبة حاليًا. جرّب نوعًا أو جوًا مختلفًا.' }, { status: 404 });
+      if (!result.recommendations.length) return NextResponse.json({ message: 'قل لي وش جوّك أكثر: أكشن، كوميديا، رعب، أو شيء ثاني؟' });
       return NextResponse.json({ ...result, recommendationQuery: query });
     } catch {
       return NextResponse.json({ error: 'الترشيحات غير متاحة الآن. حاول مرة ثانية.' }, { status: 502 });
     }
   }
-  const command = access === 'allowed'
-    ? await interpretWatchCommand(input) ?? parseWatchCommand(input)
-    : parseWatchCommand(input);
-  if (command.title.length < 2) return NextResponse.json({ error: 'اكتب اسم الفيلم أو المسلسل ورقم الحلقة.' }, { status: 400 });
+  if (command?.intent === 'chat') return NextResponse.json({ message: command.reply || 'هلا والله! قل لي وش تحب تشوف وأضبط لك فيلم أو مسلسل.' });
+  if (command?.intent === 'clarify') return NextResponse.json({ message: command.reply || 'وش اسم العمل أو وش نوعه؟ أعطني كلمة منه وأدور لك.' });
+  if (!command || command.title.length < 2) return NextResponse.json({ message: 'وش تبي تشوف؟ اكتب اسم الفيلم أو المسلسل، أو قل لي وش جوّك وأرشح لك.' });
   if (command.season !== undefined && (command.season < 0 || command.season > 99)
     || command.episode !== undefined && (command.episode < 1 || command.episode > 999)) {
     return NextResponse.json({ error: 'رقم الموسم أو الحلقة غير صحيح.' }, { status: 400 });
   }
 
   try {
-    let results = command.type === 'tv' ? (await searchTV(command.title)).results
-      : command.type === 'movie' ? (await searchMovies(command.title)).results
-        : await searchMulti(command.title);
-    if (command.personHint && command.type === 'tv' && /^[\p{L}\s]+$/u.test(command.title)) {
+    const rawTitle = parseWatchCommand(input).title;
+    const terms = [command.title, ...(command.alternateTitles || []), ...(command.personHint ? [] : [rawTitle])];
+    if (command.personHint && command.type === 'tv' && /^[a-z\s]+$/i.test(command.title)) {
       const variant = command.title.endsWith('s') ? command.title.slice(0, -1) : `${command.title}s`;
-      if (variant.length >= 2 && variant !== command.title) {
-        const related = (await searchTV(variant)).results;
-        const seen = new Set(results.map(item => item.id));
-        results = [...results, ...related.filter(item => !seen.has(item.id))];
-      }
+      if (variant.length >= 2) terms.push(variant);
     }
-    let ranked = results.map(item => ({ item, rank: score(item, command.title) }))
-      .filter(result => result.rank > 0)
-      .sort((a, b) => b.rank - a.rank);
-    if (!ranked.length) return NextResponse.json({ error: 'ما لقيت العمل. جرّب اسمه الإنجليزي أو اكتب الاسم كاملًا.' }, { status: 404 });
+    const found = new Map<string, { item: TMDBTrending; rank: number }>();
+    for (const term of [...new Set(terms.map(value => value.trim()).filter(value => value.length >= 2))].slice(0, 3)) {
+      const results = command.type === 'tv' ? (await searchTV(term)).results
+        : command.type === 'movie' ? (await searchMovies(term)).results : await searchMulti(term);
+      results.forEach((item, index) => {
+        const match = score(item, term);
+        // TMDB can match an Arabic query while returning only an English display title.
+        const rank = match > 0 ? match : /[\u0600-\u06ff]/.test(term) ? Math.max(20, 42 - index) : 0;
+        const key = `${item.media_type}-${item.id}`;
+        if (rank > (found.get(key)?.rank || 0)) found.set(key, { item, rank });
+      });
+      if (![...found.values()].some(result => result.rank >= 78) || /[\u0600-\u06ff]/.test(input) || selectedId) continue;
+      break;
+    }
+    let ranked = [...found.values()].sort((a, b) => b.rank - a.rank);
+    if (!ranked.length) return NextResponse.json({ message: 'ما قدرت أحدد العمل من الاسم هذا. اكتب كلمة من عنوانه أو اسم ممثل فيه، وإذا تبي قل لي وش جوّك وأرشح لك.' });
 
     if (command.personHint && command.type === 'tv') {
       const person = normalized(command.personHint);
@@ -109,18 +133,13 @@ export async function POST(request: NextRequest) {
       }));
       const matches = withCast.filter(result => result.matched);
       if (matches.length) ranked = matches.sort((a, b) => b.rank - a.rank);
-      else if (!selectedId) return NextResponse.json({ choices: ranked.slice(0, 4).map(({ item }) => ({
-        id: item.id, title: getTitle(item), year: getYear(item), type: item.media_type,
-      })) });
+      else if (!selectedId) return NextResponse.json({ message: 'لقيت أكثر من احتمال. أي واحد تقصد؟', choices: choices(ranked) });
     }
 
     const choice = selectedId ? ranked.find(result => result.item.id === selectedId) : ranked[0];
-    if (!choice) return NextResponse.json({ error: 'اختر عملًا من النتائج.' }, { status: 400 });
-    if (!selectedId && ranked.length > 1 && (choice.rank < 58
-      || (ranked[1].rank === choice.rank && getYear(ranked[1].item) === getYear(choice.item)))) {
-      return NextResponse.json({ choices: ranked.slice(0, 4).map(({ item }) => ({
-        id: item.id, title: getTitle(item), year: getYear(item), type: item.media_type,
-      })) });
+    if (!choice) return NextResponse.json({ message: 'اختر واحدًا من الخيارات، أو اكتب لي الاسم بشكل أوضح.' });
+    if (!selectedId && (choice.rank < 58 || ranked.length > 1 && ranked[1].rank >= 78 && ranked[1].rank >= choice.rank - 10)) {
+      return NextResponse.json({ message: 'تقصد أي واحد من هذي الأعمال؟', choices: choices(ranked) });
     }
 
     const item = choice.item;
@@ -130,10 +149,10 @@ export async function POST(request: NextRequest) {
     const season = command.season ?? 1;
     const episodes = await getSeasonEpisodes(item.id, season).catch(() => []);
     const matched = episodes.find(entry => entry.episode_number === command.episode);
-    if (!matched) return NextResponse.json({ error: `ما لقيت الحلقة ${command.episode} في الموسم ${season} من ${getTitle(item)}.` }, { status: 404 });
+    if (!matched) return NextResponse.json({ message: `ما ظهرت لي الحلقة ${command.episode} من الموسم ${season} في ${getTitle(item)}. تأكد من رقم الموسم أو الحلقة وقل لي.` });
     const airDate = resolveEpisodeAirDate(item.id, season, matched.episode_number, matched.air_date);
     if (episodeDateStatus(airDate, riyadhToday()) === 'upcoming') {
-      return NextResponse.json({ error: `الحلقة ${command.episode} من ${getTitle(item)} لم تصدر بعد.` }, { status: 404 });
+      return NextResponse.json({ message: `الحلقة ${command.episode} من ${getTitle(item)} لم تصدر بعد. تبي أفتح لك صفحة المسلسل وتشوف الحلقات المتاحة؟` });
     }
     return NextResponse.json({ href: `/watch/tv/${item.id}/${season}/${command.episode}`, title: getTitle(item) });
   } catch {
