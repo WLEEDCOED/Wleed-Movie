@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MovieHeroImage from './MovieHeroImage';
+import EpisodeOverview from './EpisodeOverview';
 import type { TMDBEpisode, TMDBSeason } from '@/lib/tmdb';
 import { getImageUrl } from '@/lib/tmdb';
 import { episodeDateStatus, riyadhToday } from '@/lib/episode-dates';
@@ -40,6 +41,7 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
   const router = useRouter();
   const [progress, setProgress] = useState<Record<string, EpisodeProgress>>({});
   const [currentDate, setCurrentDate] = useState(today);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const refreshDate = () => setCurrentDate(riyadhToday());
@@ -156,9 +158,17 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
               {inProgress && <Link href={href} className="series-episode-continue">Continue · {formatPosition(state!.positionSeconds)}</Link>}
               {watched && <span className="series-episode-watched-label">Watched</span>}
             </div>
-            {episode.overview && <details className="series-episode-description">
+            {episode.overview && <details className="series-episode-description"
+              onToggle={event => {
+                const open = event.currentTarget.open;
+                const key = `${selectedSeason}:${episode.episode_number}`;
+                setExpandedDescriptions(current => ({ ...current, [key]: open }));
+              }}>
               <summary>About episode <span aria-hidden="true">⌄</span></summary>
-              <p dir="auto">{episode.overview}</p>
+              {expandedDescriptions[`${selectedSeason}:${episode.episode_number}`]
+                ? <EpisodeOverview tmdbId={seriesId} season={selectedSeason} episode={episode.episode_number}
+                    overview={episode.overview} sourceOverview={episode.sourceOverview} />
+                : <p dir="rtl">{episode.overview}</p>}
             </details>}
           </div>
 

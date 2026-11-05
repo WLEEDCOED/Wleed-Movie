@@ -40,6 +40,7 @@ export interface TMDBEpisode {
   season_number: number;
   name: string;
   overview: string;
+  sourceOverview?: string;
   still_path: string | null;
   air_date: string | null;
   vote_average: number;
@@ -301,10 +302,13 @@ export async function getSeasonEpisodes(tmdbId: number, seasonNumber: number): P
 
   return (enSeason?.episodes || []).map((ep) => {
     const arEp = arEpisodesMap.get(ep.episode_number);
+    const arabicOverview = arabicText(arEp?.overview);
     return {
       ...ep,
       name: ep.name || `Episode ${ep.episode_number}`,
-      overview: arabicText(arEp?.overview) || 'لا يتوفر وصف عربي لهذه الحلقة حاليًا.',
+      overview: arabicOverview || (ep.overview?.trim()
+        ? 'سيُترجم وصف الحلقة تلقائيًا عند فتحه.' : 'لا يتوفر وصف لهذه الحلقة حاليًا.'),
+      sourceOverview: arabicOverview ? undefined : ep.overview?.trim() || undefined,
     };
   });
 }

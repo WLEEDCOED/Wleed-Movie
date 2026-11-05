@@ -3,6 +3,7 @@ import { generateTVServers } from '@/lib/servers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import ServerSwitcher from '@/components/ServerSwitcher';
+import EpisodeOverview from '@/components/EpisodeOverview';
 import type { Metadata } from 'next';
 
 interface PageProps {
@@ -94,7 +95,9 @@ export default async function WatchTVPage({ params }: PageProps) {
       {currentEp?.overview && (
         <div className="mt-8 glass rounded-xl p-6 animate-fade-in">
           <h2 className="text-lg font-bold mb-2">About This Episode</h2>
-          <p className="text-neutral-300 leading-relaxed" dir="auto">{currentEp.overview}</p>
+          <EpisodeOverview tmdbId={tmdbId} season={seasonNum} episode={episodeNum}
+            overview={currentEp.overview} sourceOverview={currentEp.sourceOverview}
+            className="text-neutral-300 leading-relaxed" />
         </div>
       )}
 
