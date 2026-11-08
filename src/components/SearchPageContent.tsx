@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import MediaCard from './MediaCard';
-import WatchAssistant from './WatchAssistant';
 import { getTitle, type TMDBTrending } from '@/lib/tmdb';
 
 type MediaFilter = 'all' | 'movie' | 'tv';
@@ -64,8 +63,6 @@ export default function SearchPageContent({ initialQuery, initialType, initialRe
   return <div className="search-page content-shell">
     <div className="search-page-intro">
       <Link className="search-page-back" href="/">← Home</Link>
-      <h1>What are you in the mood for?</h1>
-      <WatchAssistant />
       <div className="search-page-controls">
         <label className="search-type-wrap">
           <span className="sr-only">Search category</span>
