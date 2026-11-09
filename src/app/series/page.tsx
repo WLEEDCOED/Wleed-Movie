@@ -5,12 +5,12 @@ import CatalogFilters from '@/components/CatalogFilters';
 import MediaCard from '@/components/MediaCard';
 import Pagination from '@/components/Pagination';
 
-type SearchParams = { q?: string; provider?: string; genre?: string; year?: string; sort?: string; country?: string; page?: string };
+type SearchParams = { q?: string; provider?: string; genre?: string; year?: string; sort?: string; country?: string; region?: string; page?: string };
 
 export default async function SeriesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page) || 1);
-  const result = sp.q ? await searchTV(sp.q, page) : await discoverTV({ page, genre: Number(sp.genre) || undefined, year: Number(sp.year) || undefined, provider: Number(sp.provider) || undefined, sort: sp.sort, country: sp.country });
+  const result = sp.q ? await searchTV(sp.q, page) : await discoverTV({ page, genre: Number(sp.genre) || undefined, year: Number(sp.year) || undefined, provider: Number(sp.provider) || undefined, sort: sp.sort, country: sp.country, watchRegion: sp.region });
   const heroItems = result.results.filter(item => item.backdrop_path).slice(0, 7);
   return <div className="landing-page">
     {!sp.q && page === 1 && <HeroBanner items={heroItems} />}

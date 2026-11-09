@@ -1,3 +1,5 @@
+import { getCatalogWatchRegion } from './catalog-regions';
+
 const TMDB_API_KEY = process.env.TMDB_API_KEY || '';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
@@ -359,6 +361,7 @@ export interface DiscoverParams {
   provider?: number;
   sort?: string;
   country?: string;
+  watchRegion?: string;
   minVotes?: number;
 }
 
@@ -384,7 +387,6 @@ export async function discoverMovies(params: DiscoverParams = {}): Promise<Disco
   const queryParams: Record<string, string> = {
     sort_by: params.sort || 'popularity.desc',
     page: (params.page || 1).toString(),
-    watch_region: 'US',
   };
   if (params.genre) queryParams.with_genres = params.genre.toString();
   if (params.year) queryParams.primary_release_year = params.year.toString();
@@ -393,6 +395,7 @@ export async function discoverMovies(params: DiscoverParams = {}): Promise<Disco
   else if (params.sort === 'vote_average.desc') queryParams['vote_count.gte'] = '200';
   if (params.provider) {
     queryParams.with_watch_providers = params.provider.toString();
+    queryParams.watch_region = getCatalogWatchRegion(params.country, params.watchRegion);
   }
 
   const data = await fetchMergedList('/discover/movie', queryParams);
@@ -408,7 +411,6 @@ export async function discoverTV(params: DiscoverParams = {}): Promise<DiscoverR
   const queryParams: Record<string, string> = {
     sort_by: params.sort === 'primary_release_date.desc' ? 'first_air_date.desc' : params.sort || 'popularity.desc',
     page: (params.page || 1).toString(),
-    watch_region: 'US',
   };
   if (params.genre) queryParams.with_genres = params.genre.toString();
   if (params.year) queryParams.first_air_date_year = params.year.toString();
@@ -417,6 +419,7 @@ export async function discoverTV(params: DiscoverParams = {}): Promise<DiscoverR
   else if (params.sort === 'vote_average.desc') queryParams['vote_count.gte'] = '200';
   if (params.provider) {
     queryParams.with_watch_providers = params.provider.toString();
+    queryParams.watch_region = getCatalogWatchRegion(params.country, params.watchRegion);
   }
 
   const data = await fetchMergedList('/discover/tv', queryParams);

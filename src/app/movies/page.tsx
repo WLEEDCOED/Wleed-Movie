@@ -6,12 +6,12 @@ import CatalogFilters from '@/components/CatalogFilters';
 import MediaCard from '@/components/MediaCard';
 import Pagination from '@/components/Pagination';
 
-type SearchParams = { q?: string; provider?: string; genre?: string; year?: string; sort?: string; country?: string; page?: string };
+type SearchParams = { q?: string; provider?: string; genre?: string; year?: string; sort?: string; country?: string; region?: string; page?: string };
 
 export default async function MoviesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page) || 1);
-  const result = sp.q ? await searchMovies(sp.q, page) : await discoverMovies({ page, genre: Number(sp.genre) || undefined, year: Number(sp.year) || undefined, provider: Number(sp.provider) || undefined, sort: sp.sort, country: sp.country });
+  const result = sp.q ? await searchMovies(sp.q, page) : await discoverMovies({ page, genre: Number(sp.genre) || undefined, year: Number(sp.year) || undefined, provider: Number(sp.provider) || undefined, sort: sp.sort, country: sp.country, watchRegion: sp.region });
   const upcoming = !sp.q && page === 1 ? await getUpcomingMovies() : [];
   const heroItems = result.results.filter(item => item.backdrop_path).slice(0, 7);
   return <div className="landing-page">
