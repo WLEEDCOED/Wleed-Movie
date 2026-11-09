@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { PROVIDER_BRANDS } from '@/lib/providers';
 
 const genreNames: Record<number, string> = { 28:'Action',35:'Comedy',18:'Drama',27:'Horror',10749:'Romance',878:'Sci-Fi',53:'Thriller',16:'Animation',12:'Adventure',80:'Crime',99:'Documentary',14:'Fantasy',10759:'Action & Adventure',9648:'Mystery',10765:'Sci-Fi & Fantasy',10768:'War',10764:'Reality',10751:'Family' };
-const countries = [{ id: 'US', name: 'United States' }, { id: 'GB', name: 'United Kingdom' }, { id: 'KR', name: 'South Korea' }, { id: 'IN', name: 'India' }, { id: 'JP', name: 'Japan' }, { id: 'FR', name: 'France' }];
+const countries = [{ id: 'US', name: 'United States' }, { id: 'GB', name: 'United Kingdom' }, { id: 'TR', name: 'Turkey' }, { id: 'KR', name: 'South Korea' }, { id: 'IN', name: 'India' }, { id: 'JP', name: 'Japan' }, { id: 'FR', name: 'France' }];
 const sorts = [{ id: 'popularity.desc', name: 'Popular' }, { id: 'vote_average.desc', name: 'Top Rated' }, { id: 'primary_release_date.desc', name: 'Latest' }];
 
 export default function CatalogFilters({ baseUrl, genres, current, randomHrefs }: { baseUrl: string; genres: { id: number; name: string }[]; current: Record<string, string | undefined>; randomHrefs?: string[] }) {
