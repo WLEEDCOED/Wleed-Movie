@@ -35,12 +35,13 @@ export default function ServerSwitcher({
   const [activeServer, setActiveServer] = useState<Server | null>(
     defaultServer
   );
-  const [blockPopups, setBlockPopups] = useState(true);
+  const [serversAllowingPopups, setServersAllowingPopups] = useState<string[]>([]);
   const [atlanticRefreshKey, setAtlanticRefreshKey] = useState(0);
   const [availability, setAvailability] = useState<{ key: string; available: boolean } | null>(null);
   const [checkingSubtitles, setCheckingSubtitles] = useState(false);
   const availabilityKey = `${mediaType}-${tmdbId ?? 0}-${season ?? 0}-${episode ?? 0}`;
   const subAvailable = availability?.key === availabilityKey ? availability.available : null;
+  const blockPopups = !activeServer || !serversAllowingPopups.includes(activeServer.id);
 
   useEffect(() => {
     if (!tmdbId) return;
@@ -108,7 +109,7 @@ export default function ServerSwitcher({
   return (
     <div className="watch-switcher space-y-4">
       {activeServer ? (
-        <PlayerFrame src={activeServer.embedUrl} title={`مشغل ${activeServer.name}`} watchInfo={watchInfo} blockPopups={activeServer.id === 'cinesrc' && blockPopups} refreshKey={activeServer.id === 'atlantic' ? atlanticRefreshKey : 0} />
+        <PlayerFrame src={activeServer.embedUrl} title={`مشغل ${activeServer.name}`} watchInfo={watchInfo} blockPopups={blockPopups} refreshKey={activeServer.id === 'atlantic' ? atlanticRefreshKey : 0} />
       ) : (
         <div className="relative rounded-2xl overflow-hidden bg-black border border-neutral-800/50 shadow-2xl shadow-black/50">
           <div className="aspect-video relative flex items-center justify-center">
@@ -139,11 +140,15 @@ export default function ServerSwitcher({
         </div>
       )}
 
-      {activeServer?.id === 'cinesrc' && <button
+      {activeServer && <button
         type="button"
-        onClick={() => setBlockPopups((current) => !current)}
+        onClick={() => setServersAllowingPopups((current) =>
+          current.includes(activeServer.id)
+            ? current.filter((id) => id !== activeServer.id)
+            : [...current, activeServer.id]
+        )}
         aria-pressed={blockPopups}
-        title="إذا لم يعمل المشغل، أوقف منع النوافذ المنبثقة وجرب مرة أخرى"
+        title="يعيد تحميل المشغل ويغيّر منع النوافذ المنبثقة لهذا السيرفر فقط"
         className={`rounded-xl border px-3.5 py-2 text-xs sm:text-sm font-medium transition-colors ${
           blockPopups
             ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
