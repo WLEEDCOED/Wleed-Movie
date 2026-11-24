@@ -89,6 +89,8 @@ export default function PlayerFrame({ src, title, children, watchInfo, blockPopu
     if (url.origin === 'https://cinesrc.st' && resume !== null) {
       url.searchParams.set('t', String(Math.floor(resume)));
       url.searchParams.set('continueprompt', 'false');
+    } else if (url.origin === 'https://vidora.ac' && resume !== null) {
+      url.searchParams.set('startAt', String(Math.floor(resume)));
     }
     return { source: src, url: url.toString(), resume };
   }, [hasHydrated, src, watchInfo]);
@@ -106,6 +108,8 @@ export default function PlayerFrame({ src, title, children, watchInfo, blockPopu
       const data = event.data as Record<string, unknown>;
       const type = data.type;
       let position: unknown = data.currentTime;
+      let duration: unknown = data.duration;
+      let saveImmediately = type === 'cinesrc:seeked' || type === 'cinesrc:response';
       if (event.origin === 'https://cinesrc.st' && src.startsWith('https://cinesrc.st/')) {
         if (type === 'cinesrc:nextepisode' && info.mediaType === 'tv' &&
             (Number(data.season) !== info.season || Number(data.episode) !== info.episode)) {
@@ -122,21 +126,27 @@ export default function PlayerFrame({ src, title, children, watchInfo, blockPopu
         }
         if (type === 'cinesrc:response' && data.command === 'getCurrentTime') position = data.result;
         else if (type !== 'cinesrc:timeupdate' && type !== 'cinesrc:seeked') return;
-      } else if (event.origin === 'https://embed.vidrift.net' && src.startsWith('https://embed.vidrift.net/')) {
-        if (Number(data.tmdbId) !== info.mediaId || data.mediaType !== info.mediaType ||
-            (info.mediaType === 'tv' && (Number(data.season) !== info.season || Number(data.episode) !== info.episode))) return;
-        if (type !== 'vidrift:progress' && type !== 'vidrift:paused') return;
+      } else if (event.origin === 'https://vidora.ac' && src.startsWith('https://vidora.ac/')) {
+        if (type !== 'PLAYER_EVENT' || !data.data || typeof data.data !== 'object') return;
+        const playerEvent = data.data as Record<string, unknown>;
+        if (Number(playerEvent.tmdbId) !== info.mediaId || playerEvent.mediaType !== info.mediaType ||
+            (info.mediaType === 'tv' && (Number(playerEvent.season) !== info.season || Number(playerEvent.episode) !== info.episode))) return;
+        const action = playerEvent.event;
+        if (action !== 'timeupdate' && action !== 'pause' && action !== 'seeked' && action !== 'ended') return;
+        position = playerEvent.currentTime;
+        duration = playerEvent.duration;
+        saveImmediately = action !== 'timeupdate';
       } else {
         return;
       }
       if (typeof position !== 'number' || !Number.isFinite(position) || position < 0) return;
       const now = Date.now();
       const last = lastPositionRef.current;
-      if (type !== 'cinesrc:seeked' && type !== 'cinesrc:response' && type !== 'vidrift:paused' && now - last.savedAt < 2000 && Math.abs(position - last.seconds) < 10) return;
-      saveWatchPosition(info, position, typeof data.duration === 'number' ? data.duration : undefined);
+      if (!saveImmediately && now - last.savedAt < 2000 && Math.abs(position - last.seconds) < 10) return;
+      const durationSeconds = typeof duration === 'number' && Number.isFinite(duration) && duration > 0 ? duration : undefined;
+      saveWatchPosition(info, position, durationSeconds);
       if (info.mediaType === 'tv' && info.season && info.episode) {
-        saveEpisodePosition(info.mediaId, info.season, info.episode, position,
-          typeof data.duration === 'number' ? data.duration : info.runtimeSeconds);
+        saveEpisodePosition(info.mediaId, info.season, info.episode, position, durationSeconds ?? info.runtimeSeconds);
       }
       lastPositionRef.current = { seconds: position, savedAt: now };
     };
@@ -349,14 +359,9 @@ export default function PlayerFrame({ src, title, children, watchInfo, blockPopu
           title={title}
           className="w-full h-full"
           allowFullScreen
-          referrerPolicy={src.startsWith('https://embed.vidrift.net/') ? 'strict-origin-when-cross-origin' : 'origin'}
+          referrerPolicy="origin"
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-          sandbox={blockPopups && !src.startsWith('https://embed.vidrift.net/') ? 'allow-scripts allow-same-origin allow-forms allow-downloads allow-presentation allow-orientation-lock' : undefined}
-          onLoad={() => {
-            if (src.startsWith('https://embed.vidrift.net/') && activeFrame.resume !== null) {
-              iframeRef.current?.contentWindow?.postMessage({ type: 'vidrift:resume', currentTime: activeFrame.resume }, 'https://embed.vidrift.net');
-            }
-          }}
+          sandbox={blockPopups ? 'allow-scripts allow-same-origin allow-forms allow-downloads allow-presentation allow-orientation-lock' : undefined}
         />}
 
         {children}
