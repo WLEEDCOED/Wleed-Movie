@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import PlayerFrame from './PlayerFrame';
-import type { WatchInfo } from '@/lib/watch-history';
+import { getWatchServer, recordWatchVisit, type WatchInfo } from '@/lib/watch-history';
+
+const noSubscription = () => () => {};
+const serverSnapshot = () => undefined;
 
 interface Server {
   id: string;
@@ -32,14 +35,19 @@ export default function ServerSwitcher({
 }: ServerSwitcherProps) {
   const defaultServer =
     servers.find((s) => s.isTrusted) || servers[0] || null;
-  const [activeServer, setActiveServer] = useState<Server | null>(
-    defaultServer
+  const savedServerId = useSyncExternalStore(
+    noSubscription,
+    () => watchInfo ? getWatchServer(watchInfo) : null,
+    serverSnapshot,
   );
+  const [selection, setSelection] = useState<{ video: string; id: string } | null>(null);
   const [serversAllowingPopups, setServersAllowingPopups] = useState<string[]>([]);
   const [atlanticRefreshKey, setAtlanticRefreshKey] = useState(0);
   const [availability, setAvailability] = useState<{ key: string; available: boolean } | null>(null);
   const [checkingSubtitles, setCheckingSubtitles] = useState(false);
   const availabilityKey = `${mediaType}-${tmdbId ?? 0}-${season ?? 0}-${episode ?? 0}`;
+  const activeServerId = selection?.video === availabilityKey ? selection.id : savedServerId;
+  const activeServer = servers.find(server => server.id === activeServerId) ?? defaultServer;
   const subAvailable = availability?.key === availabilityKey ? availability.available : null;
   const blockPopups = !activeServer || !serversAllowingPopups.includes(activeServer.id);
 
@@ -108,7 +116,7 @@ export default function ServerSwitcher({
 
   return (
     <div className="watch-switcher space-y-4">
-      {activeServer ? (
+      {activeServer && savedServerId !== undefined ? (
         <PlayerFrame src={activeServer.embedUrl} title={`مشغل ${activeServer.name}`} watchInfo={watchInfo} blockPopups={blockPopups} refreshKey={activeServer.id === 'atlantic' ? atlanticRefreshKey : 0} />
       ) : (
         <div className="relative rounded-2xl overflow-hidden bg-black border border-neutral-800/50 shadow-2xl shadow-black/50">
@@ -127,7 +135,11 @@ export default function ServerSwitcher({
             <button
               key={server.id}
               type="button"
-              onClick={() => setActiveServer(server)}
+              onClick={() => {
+                setSelection({ video: availabilityKey, id: server.id });
+                if (watchInfo) recordWatchVisit(watchInfo, server.id);
+              }}
+              aria-pressed={activeServer?.id === server.id}
               className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all ${
                 activeServer?.id === server.id
                   ? 'bg-red-600 text-white shadow-lg shadow-red-900/30 ring-1 ring-red-400'

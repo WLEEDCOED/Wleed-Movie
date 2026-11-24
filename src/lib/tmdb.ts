@@ -66,6 +66,13 @@ export interface TMDBSeriesDetail {
   images?: { logos?: { file_path: string; iso_639_1: string | null }[] };
 }
 
+export type TMDBEpisodeSchedule = Pick<TMDBEpisode, 'season_number' | 'episode_number' | 'name' | 'air_date'>;
+
+export type TMDBSeriesSchedule = Pick<TMDBSeriesDetail, 'name' | 'original_name' | 'seasons' | 'status'> & {
+  last_episode_to_air?: TMDBEpisodeSchedule | null;
+  next_episode_to_air?: TMDBEpisodeSchedule | null;
+};
+
 export interface TMDBMovieDetail {
   id: number;
   title: string;
@@ -244,6 +251,15 @@ export async function getSeriesDetail(tmdbId: number): Promise<TMDBSeriesDetail>
     overview: arabicText(arSeries?.overview) || ARABIC_OVERVIEW_FALLBACK,
     genres: enSeries.genres,
   };
+}
+
+export function getSeriesSchedule(tmdbId: number): Promise<TMDBSeriesSchedule> {
+  return tmdbFetch<TMDBSeriesSchedule>(`/tv/${tmdbId}`);
+}
+
+export async function getSeasonSchedule(tmdbId: number, seasonNumber: number): Promise<TMDBEpisodeSchedule[]> {
+  const season = await tmdbFetch<{ episodes: TMDBEpisodeSchedule[] }>(`/tv/${tmdbId}/season/${seasonNumber}`);
+  return season.episodes ?? [];
 }
 
 export async function getMovieDetail(tmdbId: number): Promise<TMDBMovieDetail> {

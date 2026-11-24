@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { readWatchlist } from './WatchlistButton';
+import EpisodeCalendar from './EpisodeCalendar';
 import MediaCard from './MediaCard';
 import type { TMDBTrending } from '@/lib/tmdb';
 
@@ -21,14 +22,16 @@ export default function SavedList() {
   }, []);
 
   if (items === null) return <p className="empty-state">Loading your list…</p>;
-  if (items.length === 0) return (
-    <div className="empty-state">
-      <div className="empty-state-icon">▱</div>
-      <h2>Your list is empty</h2>
-      <p>Save movies and shows you want to watch later.</p>
-      <Link href="/movies" className="primary-pill">Explore Movies</Link>
-    </div>
-  );
+  const seriesIds = [...new Set(items.filter(item => item.media_type === 'tv' && Number.isSafeInteger(item.id) && item.id > 0).map(item => item.id))];
 
-  return <div className="catalog-grid">{items.map((item, index) => <MediaCard key={`${item.media_type}-${item.id}`} item={item} index={index} />)}</div>;
+  return <>
+    <EpisodeCalendar seriesIds={seriesIds} />
+    {items.length ? <div className="catalog-grid">{items.map((item, index) => <MediaCard key={`${item.media_type}-${item.id}`} item={item} index={index} />)}</div>
+      : <div className="empty-state">
+        <div className="empty-state-icon">▱</div>
+        <h2>Your list is empty</h2>
+        <p>Save movies and shows you want to watch later.</p>
+        <Link href="/movies" className="primary-pill">Explore Movies</Link>
+      </div>}
+  </>;
 }

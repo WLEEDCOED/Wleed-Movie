@@ -13,6 +13,7 @@ export interface WatchInfo {
 }
 
 export interface WatchEntry extends WatchInfo {
+  serverId?: string;
   viewedSeconds: number;
   positionSeconds?: number;
   durationSeconds?: number;
@@ -50,12 +51,18 @@ function saveWatchHistory(entries: WatchEntry[]) {
   }
 }
 
-export function recordWatchVisit(info: WatchInfo) {
+export function getWatchServer(info: Pick<WatchInfo, 'mediaType' | 'mediaId'>): string | null {
+  const id = getWatchHistory().find(entry => entry.mediaType === info.mediaType && entry.mediaId === info.mediaId)?.serverId;
+  return typeof id === 'string' ? id : null;
+}
+
+export function recordWatchVisit(info: WatchInfo, serverId?: string) {
   const entries = getWatchHistory();
   const previous = entries.find(entry => entry.mediaType === info.mediaType && entry.mediaId === info.mediaId);
   const sameVideo = previous?.href === info.href;
   const next: WatchEntry = {
     ...info,
+    serverId: serverId ?? previous?.serverId,
     viewedSeconds: sameVideo ? previous.viewedSeconds : 0,
     positionSeconds: sameVideo ? previous.positionSeconds : undefined,
     durationSeconds: sameVideo ? previous.durationSeconds : undefined,
