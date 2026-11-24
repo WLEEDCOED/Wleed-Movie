@@ -1,10 +1,12 @@
-import { getMovieDetail, getMovieHeroExtras, getImageUrl } from '@/lib/tmdb';
+import { getMovieCollection, getMovieDetail, getMovieHeroExtras, getImageUrl } from '@/lib/tmdb';
 import { generateMovieServers } from '@/lib/servers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import ServerSwitcher from '@/components/ServerSwitcher';
 import WatchlistButton from '@/components/WatchlistButton';
 import MovieHeroImage from '@/components/MovieHeroImage';
+import MovieCollection from '@/components/MovieCollection';
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import type { TMDBTrending } from '@/lib/tmdb';
 
@@ -46,6 +48,7 @@ export default async function MoviePage({ params }: PageProps) {
   const companies = movie.production_companies?.slice(0, 5) ?? [];
   const hasInfo = Boolean(movie.runtime || movie.original_language || movie.release_date || movie.budget || movie.revenue || companies.length);
   const imdbLink = movie.imdb_id && /^tt\d+$/.test(movie.imdb_id) ? `https://www.imdb.com/title/${movie.imdb_id}/` : null;
+  const collection = movie.belongs_to_collection;
 
   return <div className="detail-page movie-detail-page">
     <section className="detail-hero movie-hero" aria-label={`${movie.title} details`}>
@@ -83,7 +86,35 @@ export default async function MoviePage({ params }: PageProps) {
         </div>
       </div>
     </section>
+    {collection && <Suspense fallback={null}>
+      <MovieCollectionSection collectionId={collection.id} collectionName={collection.name} currentMovieId={id} />
+    </Suspense>}
     <section id="watch" className="detail-watch content-shell"><div className="rail-heading"><h2>Watch {movie.title}</h2></div><ServerSwitcher servers={generateMovieServers(id)} tmdbId={id} mediaType="movie" watchInfo={{ mediaType: 'movie', mediaId: id, title: movie.title, imageUrl: getImageUrl(movie.backdrop_path, 'w780'), href: `/movie/${id}#watch`, runtimeSeconds: movie.runtime ? movie.runtime * 60 : undefined }} /></section>
     {heroExtras.cast.length > 0 && <section className="movie-hero-cast content-shell" aria-labelledby="movie-cast-heading"><h2 id="movie-cast-heading">Cast</h2><div className="movie-cast-track">{heroExtras.cast.map(person => <div className="movie-cast-person" key={person.id}><MovieHeroImage src={getImageUrl(person.profile_path, 'w185')} alt={`${person.name} as ${person.character || 'cast member'}`} fallback={person.name.charAt(0)} className="movie-cast-photo" width={185} height={185} /><strong>{person.name}</strong>{person.character && <span>{person.character}</span>}</div>)}</div></section>}
   </div>;
+}
+
+async function MovieCollectionSection({ collectionId, collectionName, currentMovieId }: {
+  collectionId: number;
+  collectionName: string;
+  currentMovieId: number;
+}) {
+  const collection = await getMovieCollection(collectionId).catch(() => null);
+  const movies = new Map((collection?.parts ?? [])
+    .filter(part => Number.isSafeInteger(part.id) && part.id > 0)
+    .map(part => {
+      const date = part.release_date;
+      return [part.id, {
+        id: part.id,
+        title: part.title || part.name || part.original_title || part.original_name || 'Movie',
+        posterUrl: getImageUrl(part.poster_path, 'w185'),
+        releaseDate: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
+      }];
+    }));
+  if (movies.size < 2) return null;
+  const ordered = [...movies.values()].sort((a, b) =>
+    (a.releaseDate ?? '9999').localeCompare(b.releaseDate ?? '9999') || a.id - b.id
+  );
+
+  return <MovieCollection name={collection?.name || collectionName} movies={ordered} currentMovieId={currentMovieId} />;
 }

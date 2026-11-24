@@ -90,7 +90,23 @@ export interface TMDBMovieDetail {
   budget?: number;
   revenue?: number;
   production_companies?: { id: number; name: string; logo_path: string | null }[];
+  belongs_to_collection?: { id: number; name: string } | null;
   images?: { logos?: { file_path: string; iso_639_1: string | null }[] };
+}
+
+interface TMDBCollectionPart {
+  id: number;
+  title?: string;
+  name?: string;
+  original_title?: string;
+  original_name?: string;
+  poster_path: string | null;
+  release_date?: string | null;
+}
+
+interface TMDBMovieCollection {
+  name: string;
+  parts: TMDBCollectionPart[];
 }
 
 export interface TMDBMovieHeroExtras {
@@ -276,6 +292,10 @@ export async function getMovieDetail(tmdbId: number): Promise<TMDBMovieDetail> {
     overview: arabicText(arMovie?.overview) || ARABIC_OVERVIEW_FALLBACK,
     genres: enMovie.genres,
   };
+}
+
+export function getMovieCollection(collectionId: number): Promise<TMDBMovieCollection> {
+  return tmdbFetch<TMDBMovieCollection>(`/collection/${collectionId}`);
 }
 
 /** Optional hero details; a failed supplemental request never blocks movie playback. */
