@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { getWatchHistory, removeWatchEntry, WATCH_HISTORY_EVENT, type WatchEntry } from '@/lib/watch-history';
+import { getWatchHistory, removeWatchEntry, saveWatchCatalogVisibility, WATCH_HISTORY_EVENT, type WatchEntry } from '@/lib/watch-history';
 
 function remainingLabel(entry: WatchEntry) {
   if (entry.positionSeconds === undefined || entry.positionSeconds < 5) return 'Continue watching';
@@ -34,12 +34,28 @@ export default function ContinueWatching() {
     };
   }, []);
 
-  if (!entries.length) return null;
+  const unchecked = entries.filter(entry => entry.catalogVisible === undefined)
+    .map(entry => `${entry.mediaType}:${entry.mediaId}`).sort().join(',');
+  useEffect(() => {
+    if (!unchecked) return;
+    const controller = new AbortController();
+    fetch('/api/catalog/visibility?' + new URLSearchParams({ titles: unchecked }), { signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) return;
+        const visibility = await response.json() as Record<string, boolean>;
+        if (!controller.signal.aborted) saveWatchCatalogVisibility(visibility);
+      })
+      .catch(() => { /* Legacy entries can be checked again on the next visit. */ });
+    return () => controller.abort();
+  }, [unchecked]);
+
+  const visibleEntries = entries.filter(entry => entry.catalogVisible === true);
+  if (!visibleEntries.length) return null;
 
   return <section className="continue-section" aria-label="Continue Watching">
     <div className="rail-heading"><h2>Continue Watching</h2></div>
     <div className="continue-track">
-      {entries.map(entry => <article className="continue-card" key={`${entry.mediaType}-${entry.mediaId}`}>
+      {visibleEntries.map(entry => <article className="continue-card" key={`${entry.mediaType}-${entry.mediaId}`}>
         <Link href={entry.href} onClick={() => {
           try { sessionStorage.setItem('refresh-subtitles-on-continue', `${entry.mediaType}-${entry.mediaId}-${entry.season ?? 0}-${entry.episode ?? 0}`); } catch { /* Storage may be disabled. */ }
         }} className="continue-link" aria-label={`Continue ${entry.title}${entry.season ? `, season ${entry.season} episode ${entry.episode}` : ''}`}>

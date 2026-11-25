@@ -14,6 +14,7 @@ export interface WatchInfo {
 
 export interface WatchEntry extends WatchInfo {
   serverId?: string;
+  catalogVisible?: boolean;
   viewedSeconds: number;
   positionSeconds?: number;
   durationSeconds?: number;
@@ -63,12 +64,26 @@ export function recordWatchVisit(info: WatchInfo, serverId?: string) {
   const next: WatchEntry = {
     ...info,
     serverId: serverId ?? previous?.serverId,
+    catalogVisible: true,
     viewedSeconds: sameVideo ? previous.viewedSeconds : 0,
     positionSeconds: sameVideo ? previous.positionSeconds : undefined,
     durationSeconds: sameVideo ? previous.durationSeconds : undefined,
     updatedAt: Date.now(),
   };
   saveWatchHistory([next, ...entries.filter(entry => entry.mediaType !== info.mediaType || entry.mediaId !== info.mediaId)].slice(0, 20));
+}
+
+export function saveWatchCatalogVisibility(visibility: Record<string, boolean>) {
+  const entries = getWatchHistory();
+  let updated = false;
+  for (const entry of entries) {
+    const visible = visibility[`${entry.mediaType}:${entry.mediaId}`];
+    if (entry.catalogVisible === undefined && typeof visible === 'boolean') {
+      entry.catalogVisible = visible;
+      updated = true;
+    }
+  }
+  if (updated) saveWatchHistory(entries);
 }
 
 export function getResumePosition(info: WatchInfo): number | null {

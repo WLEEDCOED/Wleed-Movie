@@ -11,7 +11,6 @@ export const MOVIE_GENRES = [
   { id: 16,    name: 'أنيمي' },
   { id: 12,    name: 'مغامرة' },
   { id: 80,    name: 'جريمة' },
-  { id: 99,    name: 'وثائقي' },
   { id: 14,    name: 'فانتازيا' },
 ];
 
@@ -25,8 +24,6 @@ export const TV_GENRES = [
   { id: 10749, name: 'رومانسي' },
   { id: 16,    name: 'أنيمي' },
   { id: 80,    name: 'جريمة' },
-  { id: 99,    name: 'وثائقي' },
-  { id: 10764, name: 'ريالتي' },
   { id: 10751, name: 'عائلي' },
 ];
 

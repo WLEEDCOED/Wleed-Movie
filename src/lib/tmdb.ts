@@ -1,4 +1,5 @@
 import { getCatalogWatchRegion } from './catalog-regions';
+import { catalogDiscoverFilters, isCatalogTitleAllowed, type CatalogMediaType } from './catalog-content';
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY || '';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -63,12 +64,14 @@ export interface TMDBSeriesDetail {
   seasons: TMDBSeason[];
   genres: { id: number; name: string }[];
   status: string;
+  type?: string;
   images?: { logos?: { file_path: string; iso_639_1: string | null }[] };
 }
 
 export type TMDBEpisodeSchedule = Pick<TMDBEpisode, 'season_number' | 'episode_number' | 'name' | 'air_date'>;
 
-export type TMDBSeriesSchedule = Pick<TMDBSeriesDetail, 'name' | 'original_name' | 'seasons' | 'status'> & {
+export type TMDBSeriesSchedule = Pick<TMDBSeriesDetail, 'name' | 'original_name' | 'seasons' | 'status' | 'type'> & {
+  genres?: TMDBSeriesDetail['genres'];
   last_episode_to_air?: TMDBEpisodeSchedule | null;
   next_episode_to_air?: TMDBEpisodeSchedule | null;
 };
@@ -102,6 +105,7 @@ interface TMDBCollectionPart {
   original_name?: string;
   poster_path: string | null;
   release_date?: string | null;
+  genre_ids?: number[];
 }
 
 interface TMDBMovieCollection {
@@ -147,6 +151,14 @@ async function fetchMergedList(
   endpoint: string,
   params: Record<string, string> = {}
 ): Promise<{ results: TMDBTrending[]; total_pages?: number; total_results?: number; page?: number }> {
+  const [, resource, category] = endpoint.split('/');
+  const type = resource === 'movie' || resource === 'tv' ? resource : category;
+  const empty = { results: [], total_pages: 0, total_results: 0, page: 1 };
+  if (resource === 'discover' && (type === 'movie' || type === 'tv')) {
+    if (params.with_genres && !isCatalogTitleAllowed(type, [Number(params.with_genres)])) return empty;
+    params = { ...params, ...catalogDiscoverFilters(type) };
+  }
+
   try {
     const [enData, arData] = await Promise.all([
       tmdbFetch<{ results: TMDBTrending[]; total_pages?: number; total_results?: number; page?: number }>(
@@ -161,29 +173,32 @@ async function fetchMergedList(
 
     const arMap = new Map((arData.results || []).map((r) => [r.id, r]));
 
-    const merged = (enData.results || []).map((item) => {
-      const arItem = arMap.get(item.id);
-      return {
-        ...item,
-        // Preserve the correct title field for each media type.
-        title: item.title || item.original_title,
-        name: item.name || item.original_name,
-        // Poster in English:
-        poster_path: item.poster_path,
-        // Backdrop from English or fallback:
-        backdrop_path: item.backdrop_path || arItem?.backdrop_path || null,
-        // Overview in Arabic:
-        overview: arabicText(arItem?.overview) || ARABIC_OVERVIEW_FALLBACK,
-      };
-    });
+    const merged = (enData.results || [])
+      .filter(item => isCatalogTitleAllowed(item.media_type ?? type, item.genre_ids))
+      .map((item) => {
+        const arItem = arMap.get(item.id);
+        return {
+          ...item,
+          // Preserve the correct title field for each media type.
+          title: item.title || item.original_title,
+          name: item.name || item.original_name,
+          // Poster in English:
+          poster_path: item.poster_path,
+          // Backdrop from English or fallback:
+          backdrop_path: item.backdrop_path || arItem?.backdrop_path || null,
+          // Overview in Arabic:
+          overview: arabicText(arItem?.overview) || ARABIC_OVERVIEW_FALLBACK,
+        };
+      });
 
     return {
       ...enData,
       results: merged,
+      total_results: enData.total_pages === 1 ? merged.length : enData.total_results,
     };
   } catch (error) {
     console.error(`fetchMergedList failed for ${endpoint}:`, error);
-    return { results: [], total_pages: 0, total_results: 0, page: 1 };
+    return empty;
   }
 }
 
@@ -259,6 +274,8 @@ export async function getSeriesDetail(tmdbId: number): Promise<TMDBSeriesDetail>
     tmdbFetch<TMDBSeriesDetail>(`/tv/${tmdbId}`, { language: 'ar-SA' }).catch(() => null),
   ]);
 
+  if (!isCatalogTitleAllowed('tv', enSeries.genres.map(genre => genre.id), enSeries.type)) throw new Error('Title unavailable');
+
   return {
     ...enSeries,
     name: enSeries.name || enSeries.original_name || 'Series',
@@ -269,8 +286,10 @@ export async function getSeriesDetail(tmdbId: number): Promise<TMDBSeriesDetail>
   };
 }
 
-export function getSeriesSchedule(tmdbId: number): Promise<TMDBSeriesSchedule> {
-  return tmdbFetch<TMDBSeriesSchedule>(`/tv/${tmdbId}`);
+export async function getSeriesSchedule(tmdbId: number): Promise<TMDBSeriesSchedule> {
+  const series = await tmdbFetch<TMDBSeriesSchedule>(`/tv/${tmdbId}`);
+  if (!isCatalogTitleAllowed('tv', series.genres?.map(genre => genre.id), series.type)) throw new Error('Title unavailable');
+  return series;
 }
 
 export async function getSeasonSchedule(tmdbId: number, seasonNumber: number): Promise<TMDBEpisodeSchedule[]> {
@@ -284,6 +303,8 @@ export async function getMovieDetail(tmdbId: number): Promise<TMDBMovieDetail> {
     tmdbFetch<TMDBMovieDetail>(`/movie/${tmdbId}`, { language: 'ar-SA' }).catch(() => null),
   ]);
 
+  if (!isCatalogTitleAllowed('movie', enMovie.genres.map(genre => genre.id))) throw new Error('Title unavailable');
+
   return {
     ...enMovie,
     title: enMovie.title || enMovie.original_title || 'Movie',
@@ -294,8 +315,14 @@ export async function getMovieDetail(tmdbId: number): Promise<TMDBMovieDetail> {
   };
 }
 
-export function getMovieCollection(collectionId: number): Promise<TMDBMovieCollection> {
-  return tmdbFetch<TMDBMovieCollection>(`/collection/${collectionId}`);
+export async function getMovieCollection(collectionId: number): Promise<TMDBMovieCollection> {
+  const collection = await tmdbFetch<TMDBMovieCollection>(`/collection/${collectionId}`);
+  return { ...collection, parts: (collection.parts ?? []).filter(part => isCatalogTitleAllowed('movie', part.genre_ids)) };
+}
+
+export async function getCatalogTitleVisibility(type: CatalogMediaType, tmdbId: number): Promise<boolean> {
+  const title = await tmdbFetch<{ genres?: { id: number }[]; type?: string }>(`/${type}/${tmdbId}`);
+  return isCatalogTitleAllowed(type, title.genres?.map(genre => genre.id), title.type);
 }
 
 export async function getMediaImdbId(tmdbId: number, type: 'movie' | 'tv'): Promise<string | null> {

@@ -6,12 +6,13 @@ import { readWatchlist } from './WatchlistButton';
 import EpisodeCalendar from './EpisodeCalendar';
 import MediaCard from './MediaCard';
 import type { TMDBTrending } from '@/lib/tmdb';
+import { isCatalogTitleAllowed } from '@/lib/catalog-content';
 
 export default function SavedList() {
   const [items, setItems] = useState<TMDBTrending[] | null>(null);
 
   useEffect(() => {
-    const refresh = () => setItems(readWatchlist());
+    const refresh = () => setItems(readWatchlist().filter(item => item && isCatalogTitleAllowed(item.media_type, item.genre_ids)));
     refresh();
     window.addEventListener('watchlist-change', refresh);
     window.addEventListener('storage', refresh);
