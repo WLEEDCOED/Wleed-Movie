@@ -3,6 +3,7 @@
 import { useState, useEffect, useSyncExternalStore } from 'react';
 import PlayerFrame from './PlayerFrame';
 import { getWatchServer, recordWatchVisit, type WatchInfo } from '@/lib/watch-history';
+import { getSubtitleDownloadUrl, SUBTITLE_SOURCE_NAMES, type SubtitleSource } from '@/lib/servers';
 
 const noSubscription = () => () => {};
 const serverSnapshot = () => undefined;
@@ -43,12 +44,13 @@ export default function ServerSwitcher({
   const [selection, setSelection] = useState<{ video: string; id: string } | null>(null);
   const [serversAllowingPopups, setServersAllowingPopups] = useState<string[]>([]);
   const [atlanticRefreshKey, setAtlanticRefreshKey] = useState(0);
-  const [availability, setAvailability] = useState<{ key: string; available: boolean } | null>(null);
+  const [availability, setAvailability] = useState<{ key: string; sources: SubtitleSource[] } | null>(null);
   const [checkingSubtitles, setCheckingSubtitles] = useState(false);
   const availabilityKey = `${mediaType}-${tmdbId ?? 0}-${season ?? 0}-${episode ?? 0}`;
   const activeServerId = selection?.video === availabilityKey ? selection.id : savedServerId;
   const activeServer = servers.find(server => server.id === activeServerId) ?? defaultServer;
-  const subAvailable = availability?.key === availabilityKey ? availability.available : null;
+  const subSources = availability?.key === availabilityKey ? availability.sources : null;
+  const subAvailable = subSources ? subSources.length > 0 : null;
   const blockPopups = !activeServer || !serversAllowingPopups.includes(activeServer.id);
 
   useEffect(() => {
@@ -65,9 +67,12 @@ export default function ServerSwitcher({
       : null;
     const checkUrl = `/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType}${season ? `&season=${season}&episode=${episode}` : ''}&check=true${freshOnContinue ? '&refresh=true' : ''}`;
     fetch(checkUrl, { signal: controller.signal, cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data) => setAvailability({ key: availabilityKey, available: !!data.hasSub }))
-      .catch(() => { if (!controller.signal.aborted) setAvailability({ key: availabilityKey, available: false }); });
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Subtitle check failed');
+        const { sources } = await response.json() as { sources: SubtitleSource[] };
+        if (!controller.signal.aborted) setAvailability({ key: availabilityKey, sources });
+      })
+      .catch(() => { if (!controller.signal.aborted) setAvailability({ key: availabilityKey, sources: [] }); });
     return () => {
       controller.abort();
       if (refreshTimer !== null) window.clearTimeout(refreshTimer);
@@ -91,10 +96,10 @@ export default function ServerSwitcher({
       const url = `/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType}${season ? `&season=${season}&episode=${episode}` : ''}&check=true&refresh=true`;
       const response = await fetch(url, { cache: 'no-store' });
       if (!response.ok) throw new Error('Subtitle check failed');
-      const data = await response.json();
-      setAvailability({ key: availabilityKey, available: !!data.hasSub });
+      const { sources } = await response.json() as { sources: SubtitleSource[] };
+      setAvailability({ key: availabilityKey, sources });
     } catch {
-      setAvailability({ key: availabilityKey, available: false });
+      setAvailability({ key: availabilityKey, sources: [] });
     } finally {
       setCheckingSubtitles(false);
     }
@@ -203,8 +208,9 @@ export default function ServerSwitcher({
           </div>
 
           {subAvailable ? (
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
             <a
-              href={`/api/subtitles/vtt?tmdbId=${tmdbId}&type=${mediaType}${season ? `&season=${season}&episode=${episode}` : ''}&download=true&format=srt`}
+              href={getSubtitleDownloadUrl(tmdbId, mediaType, season, episode)}
               download
               className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-neutral-200 hover:text-white border border-neutral-700/60 transition-all font-medium whitespace-nowrap self-start sm:self-auto cursor-pointer"
               title="تحميل ملف الترجمة العربية بصيغة SRT"
@@ -214,6 +220,17 @@ export default function ServerSwitcher({
               </svg>
               <span>📥 تحميل ملف الترجمة (SRT)</span>
             </a>
+            {subSources?.map(source => (
+              <a key={source.id}
+                href={source.pageUrl ?? getSubtitleDownloadUrl(tmdbId, mediaType, season, episode, source.id)}
+                target={source.pageUrl ? '_blank' : undefined}
+                rel={source.pageUrl ? 'noopener noreferrer' : undefined}
+                download={source.pageUrl ? undefined : true}
+                className="rounded-lg border border-neutral-700/60 bg-neutral-900 px-3 py-1.5 font-medium text-neutral-200 hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                {SUBTITLE_SOURCE_NAMES[source.id]} {source.pageUrl ? '↗' : '(SRT)'}
+              </a>
+            ))}
+            </div>
           ) : (
             <button
               type="button"

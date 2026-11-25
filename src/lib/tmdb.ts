@@ -298,6 +298,11 @@ export function getMovieCollection(collectionId: number): Promise<TMDBMovieColle
   return tmdbFetch<TMDBMovieCollection>(`/collection/${collectionId}`);
 }
 
+export async function getMediaImdbId(tmdbId: number, type: 'movie' | 'tv'): Promise<string | null> {
+  const { imdb_id } = await tmdbFetch<{ imdb_id?: string | null }>(`/${type}/${tmdbId}/external_ids`);
+  return imdb_id && /^tt\d+$/.test(imdb_id) ? imdb_id : null;
+}
+
 /** Optional hero details; a failed supplemental request never blocks movie playback. */
 export async function getMovieHeroExtras(tmdbId: number): Promise<TMDBMovieHeroExtras> {
   type Credits = {

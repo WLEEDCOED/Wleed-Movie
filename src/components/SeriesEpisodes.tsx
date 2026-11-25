@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MovieHeroImage from './MovieHeroImage';
@@ -42,6 +42,8 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
   const [progress, setProgress] = useState<Record<string, EpisodeProgress>>({});
   const [currentDate, setCurrentDate] = useState(today);
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
+  const episodeList = useRef<HTMLDivElement>(null);
+  const [subtitleAvailability, setSubtitleAvailability] = useState<{ key: string; episodes: number[] } | null>(null);
 
   useEffect(() => {
     const refreshDate = () => setCurrentDate(riyadhToday());
@@ -92,6 +94,53 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
   });
   const watchedCount = availableEpisodes.filter(episode => progress[episodeProgressId(seriesId, selectedSeason, episode.episode_number)]?.watched).length;
   const allWatched = availableEpisodes.length > 0 && watchedCount === availableEpisodes.length;
+  const seasonKey = `${seriesId}:${selectedSeason}`;
+  const eligibleSubtitleEpisodes = availableEpisodes.map(episode => episode.episode_number).join(',');
+  const subtitledEpisodes = subtitleAvailability?.key === seasonKey ? subtitleAvailability.episodes : [];
+
+  useEffect(() => {
+    const rows = episodeList.current?.querySelectorAll<HTMLElement>('[data-subtitle-episode]');
+    if (!eligibleSubtitleEpisodes || !rows?.length) return;
+    const controller = new AbortController();
+    const queue = new Set<number>();
+    let checking = false;
+
+    async function checkVisibleEpisodes() {
+      if (checking) return;
+      checking = true;
+      while (queue.size && !controller.signal.aborted) {
+        const batch = [...queue].slice(0, 4);
+        batch.forEach(episode => queue.delete(episode));
+        const params = new URLSearchParams({ tmdbId: String(seriesId), season: String(selectedSeason), episodes: batch.join(',') });
+        try {
+          const response = await fetch('/api/subtitles/availability?' + params, { signal: controller.signal });
+          if (!response.ok) continue;
+          const { available } = await response.json() as { available: number[] };
+          if (available.length && !controller.signal.aborted) {
+            setSubtitleAvailability(current => ({
+              key: seasonKey,
+              episodes: [...new Set([...(current?.key === seasonKey ? current.episodes : []), ...available])],
+            }));
+          }
+        } catch { /* A failed lookup leaves the badge hidden. */ }
+      }
+      checking = false;
+    }
+
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        queue.add(Number((entry.target as HTMLElement).dataset.subtitleEpisode));
+        observer.unobserve(entry.target);
+      }
+      void checkVisibleEpisodes();
+    }, { rootMargin: '150px 0px' });
+    rows.forEach(row => observer.observe(row));
+    return () => {
+      controller.abort();
+      observer.disconnect();
+    };
+  }, [eligibleSubtitleEpisodes, seasonKey, selectedSeason, seriesId]);
 
   return <section className="series-episodes" aria-labelledby="series-episodes-title">
     <div className="series-episodes-head">
@@ -116,7 +165,7 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
       </div>
     </div>
 
-    <div className="series-episode-list">
+    <div className="series-episode-list" ref={episodeList}>
       {episodes.map(episode => {
         const state = progress[episodeProgressId(seriesId, selectedSeason, episode.episode_number)];
         const hasPlayed = Boolean(state?.watched || (state?.positionSeconds ?? 0) >= 5);
@@ -135,7 +184,7 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
           ? Math.min(100, state.positionSeconds / state.durationSeconds * 100)
           : 0;
 
-        return <article key={episode.id} className={`series-episode-row${upcoming ? ' is-upcoming' : ''}${isCheckable ? ' is-checkable' : ''}${isNew ? ' is-new' : ''}${watched ? ' is-watched' : ''}`}>
+        return <article key={episode.id} data-subtitle-episode={upcoming ? undefined : episode.episode_number} className={`series-episode-row${upcoming ? ' is-upcoming' : ''}${isCheckable ? ' is-checkable' : ''}${isNew ? ' is-new' : ''}${watched ? ' is-watched' : ''}`}>
           {upcoming ? <div className="series-episode-thumb series-episode-upcoming-art" aria-label={`Scheduled ${formatDate(episode.air_date)}`}>
             <span>{formatDate(episode.air_date)}</span>
           </div> : <Link href={href} className="series-episode-thumb" aria-label={`Play episode ${episode.episode_number}: ${episode.name}`}>
@@ -157,6 +206,7 @@ export default function SeriesEpisodes({ seriesId, seasons, selectedSeason, epis
               {isCheckable && <Link href={href} className="series-episode-continue" aria-label={`Check playback for episode ${episode.episode_number}: ${episode.name}`}>Check availability →</Link>}
               {inProgress && <Link href={href} className="series-episode-continue">Continue · {formatPosition(state!.positionSeconds)}</Link>}
               {watched && <span className="series-episode-watched-label">Watched</span>}
+              {!upcoming && subtitledEpisodes.includes(episode.episode_number) && <span lang="ar" dir="rtl" className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-300">ترجمة عربية متوفرة</span>}
             </div>
             {episode.overview && <details className="series-episode-description"
               onToggle={event => {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchArabicSubtitle } from '@/lib/subtitles-helper';
+import { fetchArabicSubtitle, getArabicSubtitleSources } from '@/lib/subtitles-helper';
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -14,24 +14,26 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const tmdbId = searchParams.get('tmdbId');
+  const tmdbId = Number(searchParams.get('tmdbId'));
   const type = searchParams.get('type') === 'tv' ? 'tv' : 'movie';
-  const season = searchParams.get('season') ? parseInt(searchParams.get('season')!) : 1;
-  const episode = searchParams.get('episode') ? parseInt(searchParams.get('episode')!) : 1;
+  const season = Number(searchParams.get('season') ?? 1);
+  const episode = Number(searchParams.get('episode') ?? 1);
   const format = searchParams.get('format') === 'srt' ? 'srt' : 'vtt';
   const isDownload = searchParams.get('download') === 'true' || searchParams.get('download') === '1';
   const isCheck = searchParams.get('check') === 'true';
   const forceRefresh = searchParams.get('refresh') === 'true' && isCheck;
+  const requestedSource = searchParams.get('source');
+  const source = requestedSource === 'subdl' || requestedSource === 'opensubtitles' ? requestedSource : undefined;
 
-  if (!tmdbId) {
-    return NextResponse.json({ error: 'tmdbId is required' }, { status: 400 });
+  if (!Number.isSafeInteger(tmdbId) || tmdbId < 1 || !Number.isSafeInteger(season) || season < 0 ||
+      !Number.isSafeInteger(episode) || episode < 1 || (requestedSource && !source)) {
+    return NextResponse.json({ error: 'Invalid subtitle request' }, { status: 400 });
   }
 
-  const subData = await fetchArabicSubtitle(parseInt(tmdbId), type, season, episode, forceRefresh);
-
   if (isCheck) {
+    const sources = await getArabicSubtitleSources(tmdbId, type, season, episode, forceRefresh);
     return NextResponse.json(
-      { hasSub: subData.hasSub },
+      { hasSub: sources.length > 0, sources },
       {
         headers: {
           'Access-Control-Allow-Origin': '*',
@@ -41,7 +43,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const subData = await fetchArabicSubtitle(tmdbId, type, season, episode, false, source);
   if (!subData.hasSub) {
+    if (isDownload) return new NextResponse('تعذّر تنزيل ملف الترجمة حاليًا. جرّب مصدرًا آخر من صفحة المشاهدة.', {
+      status: 404,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
     return new NextResponse('WEBVTT\n\n', {
       status: 200,
       headers: {
@@ -55,7 +62,7 @@ export async function GET(request: NextRequest) {
 
   const content = format === 'srt' ? subData.srt : subData.vtt;
   const contentType = format === 'srt' ? 'text/plain; charset=utf-8' : 'text/vtt; charset=utf-8';
-  const fileName = `subtitle-${type}-${tmdbId}${type === 'tv' ? `-s${season}e${episode}` : ''}.${format}`;
+  const fileName = `subtitle-${type}-${tmdbId}${type === 'tv' ? `-s${season}e${episode}` : ''}${source ? `-${source}` : ''}.${format}`;
 
   const headers: Record<string, string> = {
     'Content-Type': contentType,

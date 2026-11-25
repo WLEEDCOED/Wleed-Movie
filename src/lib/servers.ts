@@ -7,11 +7,18 @@ export interface StreamServer {
   language: string;
 }
 
-export function getSubtitleDownloadUrl(tmdbId: number, type: 'movie' | 'tv' = 'movie', season?: number, episode?: number): string {
+export const SUBTITLE_SOURCE_NAMES = { subdl: 'SubDL', opensubtitles: 'OpenSubtitles' } as const;
+export type SubtitleSourceId = keyof typeof SUBTITLE_SOURCE_NAMES;
+export type SubtitleSource = { id: SubtitleSourceId; pageUrl?: string };
+
+export function getSubtitleDownloadUrl(tmdbId: number, type: 'movie' | 'tv' = 'movie', season?: number, episode?: number, source?: SubtitleSourceId): string {
+  const params = new URLSearchParams({ tmdbId: String(tmdbId), type, download: 'true', format: 'srt' });
   if (type === 'tv' && season && episode) {
-    return `/api/subtitles/vtt?tmdbId=${tmdbId}&type=tv&season=${season}&episode=${episode}&download=true&format=srt`;
+    params.set('season', String(season));
+    params.set('episode', String(episode));
   }
-  return `/api/subtitles/vtt?tmdbId=${tmdbId}&type=movie&download=true&format=srt`;
+  if (source) params.set('source', source);
+  return `/api/subtitles/vtt?${params}`;
 }
 
 export function generateTVServers(tmdbId: number, season: number, episode: number): StreamServer[] {
